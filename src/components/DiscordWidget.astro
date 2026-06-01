@@ -1,0 +1,148 @@
+---
+import type { DiscordWidgetData } from "../types/discord-widget";
+
+interface Props {
+  widget: DiscordWidgetData | null;
+  fallbackInvite: string;
+  guildId: string;
+}
+
+const { widget, fallbackInvite, guildId } = Astro.props;
+const joinUrl = widget?.instant_invite ?? fallbackInvite;
+---
+
+<article class="panel overflow-hidden p-0" id="discord-widget">
+  <div class="border-b border-white/10 bg-[#0a2a8a]/40 px-6 py-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-semibold text-cyan-300">Live server</h2>
+      {
+        widget ? (
+          <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-semibold text-emerald-300">
+            <span data-widget-online>{widget.presence_count}</span> online
+          </span>
+        ) : (
+          <span class="text-sm text-slate-400">Unable to load live data</span>
+        )
+      }
+    </div>
+    {widget && <p class="mt-1 text-xl font-bold text-white" data-widget-name>{widget.name}</p>}
+  </div>
+
+  {
+    widget ? (
+      <>
+        <ul class="grid gap-3 px-6 py-5 sm:grid-cols-2" data-widget-members>
+          {
+            widget.members.map((member) => (
+              <li class="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5">
+                <span class="relative shrink-0">
+                  <img
+                    src={member.avatar_url}
+                    alt=""
+                    width="40"
+                    height="40"
+                    class="h-10 w-10 rounded-full bg-slate-800"
+                    loading="lazy"
+                  />
+                  <span
+                    class={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-950 ${
+                      member.status === "online" ? "bg-emerald-400" : "bg-slate-500"
+                    }`}
+                    aria-hidden="true"
+                  />
+                </span>
+                <span class="min-w-0">
+                  <span class="block truncate font-medium text-white">{member.username}</span>
+                  <span class="text-xs capitalize text-slate-400">{member.status}</span>
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+
+        {
+          widget.channels.length > 0 && (
+            <div class="border-t border-white/10 px-6 py-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Channels</p>
+              <ul class="mt-2 flex flex-wrap gap-2" data-widget-channels>
+                {
+                  widget.channels.map((channel) => (
+                    <li class="rounded-lg bg-white/5 px-3 py-1 text-sm text-slate-200">{channel.name}</li>
+                  ))
+                }
+              </ul>
+            </div>
+          )
+        }
+      </>
+    ) : (
+      <p class="px-6 py-8 text-slate-300">
+        Live member list could not be loaded. You can still join with the invite link.
+      </p>
+    )
+  }
+
+  <div class="border-t border-white/10 px-6 py-5">
+    <a
+      href={joinUrl}
+      target="_blank"
+      rel="noreferrer"
+      class="btn-primary inline-flex w-full justify-center sm:w-auto"
+      data-widget-join
+    >
+      Join {widget?.name ?? "Discord"}
+    </a>
+  </div>
+</article>
+
+<script define:vars={{ guildId }}>
+  const WIDGET_API = `https://discord.com/api/guilds/${guildId}/widget.json`;
+
+  async function refreshDiscordWidget() {
+    const root = document.getElementById("discord-widget");
+    if (!root) return;
+
+    try {
+      const response = await fetch(WIDGET_API);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const onlineEl = root.querySelector("[data-widget-online]");
+      const nameEl = root.querySelector("[data-widget-name]");
+      const membersEl = root.querySelector("[data-widget-members]");
+      const joinEl = root.querySelector("[data-widget-join]");
+
+      if (onlineEl) onlineEl.textContent = String(data.presence_count);
+      if (nameEl) nameEl.textContent = data.name;
+      if (joinEl) {
+        joinEl.setAttribute("href", data.instant_invite);
+        joinEl.textContent = `Join ${data.name}`;
+      }
+
+      if (membersEl && Array.isArray(data.members)) {
+        membersEl.innerHTML = data.members
+          .map(
+            (member) => `
+          <li class="flex items-center gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5">
+            <span class="relative shrink-0">
+              <img src="${member.avatar_url}" alt="" width="40" height="40" class="h-10 w-10 rounded-full bg-slate-800" loading="lazy" />
+              <span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-950 ${
+                member.status === "online" ? "bg-emerald-400" : "bg-slate-500"
+              }" aria-hidden="true"></span>
+            </span>
+            <span class="min-w-0">
+              <span class="block truncate font-medium text-white">${member.username}</span>
+              <span class="text-xs capitalize text-slate-400">${member.status}</span>
+            </span>
+          </li>`
+          )
+          .join("");
+      }
+    } catch {
+      // Keep server-rendered fallback content.
+    }
+  }
+
+  refreshDiscordWidget();
+  setInterval(refreshDiscordWidget, 60_000);
+</script>

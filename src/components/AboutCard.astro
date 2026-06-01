@@ -1,0 +1,33 @@
+---
+import { aboutContent } from "../data/content";
+---
+
+<article class="brand-card group h-full">
+  <div class="brand-card-accent" aria-hidden="true"></div>
+  <p class="font-[cursive] text-2xl text-white/95 md:text-3xl">{aboutContent.eyebrow}</p>
+  <h2 class="mt-1 text-4xl font-extrabold uppercase tracking-wide text-white md:text-5xl">
+    {aboutContent.title}
+  </h2>
+  <p class="mt-2 text-sm font-semibold uppercase tracking-[0.15em] text-cyan-200 md:text-base">
+    {aboutContent.tagline}
+  </p>
+  <div class="wave-divider my-6" aria-hidden="true"></div>
+
+  <p class="mb-4 text-base leading-relaxed text-slate-100 md:text-lg">
+    Aqua Nova was founded in November 2025 by <span class="font-semibold text-cyan-300">Salmon</span> who wants to
+    create a community of people who want a little more from <span class="font-semibold text-cyan-300">ETS2</span>.
+  </p>
+  <p class="mb-4 text-base leading-relaxed text-slate-100 md:text-lg">
+    Our vision is to bring exciting new ways to play your favourite simulator by offering frequent{" "}
+    <span class="font-semibold text-cyan-300">convoys</span> and <span class="font-semibold text-cyan-300">rewards</span>{" "}
+    for your journeys.
+  </p>
+
+  <p class="mt-6 text-sm font-bold uppercase tracking-wide text-white md:text-base">
+    What are you waiting for? Come ride the <span class="text-cyan-300">waves</span> with us.
+  </p>
+
+  <a href="/apply" class="btn-primary mt-8 inline-flex w-full justify-center sm:w-auto">
+    Apply now
+  </a>
+</article>

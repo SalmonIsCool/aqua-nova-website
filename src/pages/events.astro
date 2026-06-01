@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import { siteConfig } from "../data/site";
+
+const events = (await getCollection("events")).sort((a, b) => a.data.date.valueOf() - b.data.date.valueOf());
+---
+
+<BaseLayout title={`${siteConfig.name} | Events`}>
+  <section class="section-shell">
+    <h1 class="text-3xl font-bold">Events</h1>
+    <p class="mt-3 text-slate-300">Upcoming convoys and community sessions.</p>
+
+    <div class="mt-8 grid gap-5">
+      {
+        events.map((item) => (
+          <article class="panel">
+            <p class="text-sm text-slate-400">{item.data.date.toLocaleDateString()}</p>
+            <h2 class="mt-2 text-xl font-semibold text-cyan-300">{item.data.title}</h2>
+            <p class="mt-2 text-slate-300">{item.data.excerpt}</p>
+            <a href={`/events/${item.id}/`} class="mt-4 inline-flex text-sm font-semibold text-cyan-300 hover:text-cyan-200">
+              View event
+            </a>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>

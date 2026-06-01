@@ -1,0 +1,25 @@
+---
+import { requirements } from "../data/content";
+import { siteConfig } from "../data/site";
+---
+
+<article class="brand-card group h-full">
+  <div class="brand-card-accent" aria-hidden="true"></div>
+  <h2 class="text-3xl font-extrabold uppercase tracking-wide text-white md:text-4xl">Requirements</h2>
+  <div class="wave-divider my-5" aria-hidden="true"></div>
+
+  <ul class="space-y-4">
+    {
+      requirements.map((item) => (
+        <li class="flex gap-3 text-base leading-relaxed text-slate-100 md:text-lg">
+          <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-cyan-300" aria-hidden="true"></span>
+          <span>{item}</span>
+        </li>
+      ))
+    }
+  </ul>
+
+  <a href={siteConfig.discordInvite} target="_blank" rel="noreferrer" class="btn-secondary mt-8 inline-flex w-full justify-center sm:w-auto">
+    Join Discord
+  </a>
+</article>

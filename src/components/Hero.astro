@@ -1,0 +1,46 @@
+---
+import { siteConfig } from "../data/site";
+
+interface Props {
+  ctaHref?: string;
+  ctaLabel?: string;
+}
+
+const { ctaHref = "/apply", ctaLabel = "Apply now" } = Astro.props;
+---
+
+<section class="relative min-h-[22rem] overflow-hidden border-b border-white/10 sm:min-h-[26rem] md:min-h-[30rem]">
+  <div class="absolute inset-0">
+    <img
+      src="/assets/banner.png"
+      alt=""
+      class="h-full w-full object-cover object-center"
+      width="1920"
+      height="600"
+    />
+    <div class="absolute inset-0 bg-gradient-to-r from-[#061a52]/95 via-[#0a2a8a]/80 to-[#061a52]/70"></div>
+  </div>
+
+  <div class="relative mx-auto flex w-full max-w-7xl flex-col items-center gap-8 px-6 py-16 text-center sm:py-20 md:flex-row md:py-24 md:text-left lg:gap-12">
+    <img
+      src="/assets/logo.png"
+      alt=""
+      class="h-28 w-28 shrink-0 rounded-full shadow-lg shadow-blue-900/50 ring-4 ring-cyan-300/40 sm:h-32 sm:w-32 md:h-36 md:w-36"
+      width="144"
+      height="144"
+    />
+    <div class="max-w-2xl">
+      <p class="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-200">Virtual Trucking Company</p>
+      <h1 class="mt-2 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+        {siteConfig.name}
+      </h1>
+      <p class="mt-4 text-lg text-slate-200 sm:text-xl">{siteConfig.tagline}</p>
+      <div class="mt-8 flex flex-col items-center gap-3 sm:flex-row md:justify-start">
+        <a href={ctaHref} class="btn-primary w-full sm:w-auto">{ctaLabel}</a>
+        <a href={siteConfig.discordInvite} target="_blank" rel="noreferrer" class="btn-secondary w-full sm:w-auto">
+          Join Discord
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

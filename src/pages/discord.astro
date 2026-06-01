@@ -1,0 +1,33 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import DiscordWidget from "../components/DiscordWidget.astro";
+import { siteConfig } from "../data/site";
+import { fetchDiscordWidget } from "../lib/discord";
+
+const widget = await fetchDiscordWidget(siteConfig.discordWidgetId);
+const joinUrl = widget?.instant_invite ?? siteConfig.discordInvite;
+---
+
+<BaseLayout title={`${siteConfig.name} | Discord`}>
+  <section class="section-shell-wide">
+    <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 class="section-title">Join our Discord</h1>
+        <p class="mt-3 max-w-2xl text-base text-slate-300 sm:text-lg">
+          Connect with drivers, staff, and convoy organizers. Join before you apply.
+        </p>
+      </div>
+      <a class="btn-primary shrink-0" href={joinUrl} target="_blank" rel="noreferrer">
+        Join Discord
+      </a>
+    </div>
+
+    <div class="mt-10 max-w-3xl">
+      <DiscordWidget
+        widget={widget}
+        fallbackInvite={siteConfig.discordInvite}
+        guildId={siteConfig.discordWidgetId}
+      />
+    </div>
+  </section>
+</BaseLayout>

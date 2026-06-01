@@ -1,0 +1,76 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Hero from "../components/Hero.astro";
+import AboutCard from "../components/AboutCard.astro";
+import RequirementsCard from "../components/RequirementsCard.astro";
+import { getCollection } from "astro:content";
+import { siteConfig } from "../data/site";
+
+const announcements = (await getCollection("news"))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+---
+
+<BaseLayout title={`${siteConfig.name} | Home`} description={siteConfig.description}>
+  <Hero />
+
+  <section id="about" class="section-shell-wide">
+    <div class="grid gap-8 lg:grid-cols-2 lg:gap-10">
+      <AboutCard />
+      <RequirementsCard />
+    </div>
+  </section>
+
+  <section id="announcements" class="section-shell-wide border-t border-white/10">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 class="section-title">Announcements</h2>
+        <p class="mt-3 max-w-2xl text-base text-slate-300 sm:text-lg">
+          Latest news, convoy updates, and recruitment posts from the team.
+        </p>
+      </div>
+      <a href="/news" class="btn-secondary w-fit shrink-0">View all</a>
+    </div>
+
+    <div class="mt-10 grid gap-6 sm:grid-cols-2 sm:gap-8 xl:grid-cols-3">
+      {
+        announcements.map((item) => (
+          <article class="announcement-card">
+            {item.data.coverImage && (
+              <img
+                src={item.data.coverImage}
+                alt=""
+                class="mb-5 h-44 w-full rounded-xl object-cover sm:h-48"
+                loading="lazy"
+              />
+            )}
+            <p class="text-sm text-slate-400">{item.data.date.toLocaleDateString()}</p>
+            <h3 class="mt-2 text-xl font-semibold text-cyan-300 sm:text-2xl">{item.data.title}</h3>
+            <p class="mt-3 flex-1 text-base leading-relaxed text-slate-300">{item.data.excerpt}</p>
+            <a href={`/news/${item.id}/`} class="mt-5 inline-flex font-semibold text-cyan-300 transition hover:text-cyan-200">
+              Read announcement →
+            </a>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section-shell-wide border-t border-white/10 pb-20">
+    <h2 class="section-title text-center">Why drive with us</h2>
+    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <article class="panel text-center sm:text-left">
+        <h3 class="text-lg font-semibold text-cyan-300">Friendly community</h3>
+        <p class="mt-3 text-slate-300">A welcoming environment where drivers enjoy realistic trucking and have fun together.</p>
+      </article>
+      <article class="panel text-center sm:text-left">
+        <h3 class="text-lg font-semibold text-cyan-300">Weekly events</h3>
+        <p class="mt-3 text-slate-300">Organized convoys, VTC meetups, and public drives across ETS2.</p>
+      </article>
+      <article class="panel text-center sm:text-left sm:col-span-2 lg:col-span-1">
+        <h3 class="text-lg font-semibold text-cyan-300">Rewards & progression</h3>
+        <p class="mt-3 text-slate-300">Earn recognition through convoys, activity, and internal rank progression.</p>
+      </article>
+    </div>
+  </section>
+</BaseLayout>

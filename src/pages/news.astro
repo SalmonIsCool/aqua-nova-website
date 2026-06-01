@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import { siteConfig } from "../data/site";
+
+const news = (await getCollection("news")).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout title={`${siteConfig.name} | Announcements`}>
+  <section class="section-shell-wide">
+    <h1 class="section-title">Announcements</h1>
+    <p class="mt-4 text-lg text-slate-300 md:text-xl">Latest updates from the Aqua Nova Transport team.</p>
+
+    <div class="mt-12 grid gap-8">
+      {
+        news.map((item) => (
+          <article class="panel p-8 md:p-10">
+            <p class="text-base text-slate-400 md:text-lg">{item.data.date.toLocaleDateString()}</p>
+            <h2 class="mt-3 text-2xl font-semibold text-cyan-300 md:text-3xl">{item.data.title}</h2>
+            <p class="mt-4 text-lg text-slate-300 md:text-xl">{item.data.excerpt}</p>
+            <a href={`/news/${item.id}/`} class="mt-6 inline-flex text-base font-semibold text-cyan-300 hover:text-cyan-200 md:text-lg">
+              Read announcement →
+            </a>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>

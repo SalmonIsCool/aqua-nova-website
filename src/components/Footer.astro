@@ -1,0 +1,19 @@
+---
+import { siteConfig } from "../data/site";
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-white/10 bg-[#061a52]/80">
+  <div class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <div class="flex items-center gap-3">
+      <img src="/assets/logo.png" alt="" class="h-9 w-9 rounded-full" width="36" height="36" />
+      <p>&copy; {year} {siteConfig.name}</p>
+    </div>
+    <div class="flex flex-wrap gap-4">
+      <a class="transition hover:text-cyan-300" href="/apply">Apply</a>
+      <a class="transition hover:text-cyan-300" href={siteConfig.discordInvite} target="_blank" rel="noreferrer">
+        Discord
+      </a>
+    </div>
+  </div>
+</footer>

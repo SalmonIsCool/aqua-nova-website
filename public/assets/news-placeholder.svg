@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700">
+  <rect width="1200" height="700" fill="#0f172a" />
+  <rect x="80" y="80" width="1040" height="540" rx="20" fill="#1e293b" />
+  <text x="50%" y="50%" fill="#67e8f9" font-size="52" text-anchor="middle" font-family="Arial, sans-serif">News Cover Placeholder</text>
+</svg>
