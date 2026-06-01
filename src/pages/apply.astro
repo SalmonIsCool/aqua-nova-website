@@ -32,12 +32,29 @@ import { siteConfig } from "../data/site";
 
         <label class="grid gap-2">
           <span class="text-sm font-medium text-slate-300">Name</span>
-          <input required name="name" class="input-field" />
+          <input required name="name" class="input-field" autocomplete="name" />
         </label>
 
         <label class="grid gap-2">
-          <span class="text-sm font-medium text-slate-300">TruckersMP username</span>
-          <input required name="truckersmp_username" class="input-field" />
+          <span class="text-sm font-medium text-slate-300">TruckersMP profile (link)</span>
+          <input
+            required
+            type="url"
+            name="truckersmp_profile"
+            class="input-field"
+            placeholder="https://truckersmp.com/user/12345/your-name"
+          />
+        </label>
+
+        <label class="grid gap-2">
+          <span class="text-sm font-medium text-slate-300">Discord username</span>
+          <input
+            required
+            name="discord_username"
+            class="input-field"
+            placeholder="e.g. salmon"
+            autocomplete="username"
+          />
         </label>
 
         <label class="grid gap-2">
@@ -47,7 +64,7 @@ import { siteConfig } from "../data/site";
 
         <label class="grid gap-2">
           <span class="text-sm font-medium text-slate-300">Timezone</span>
-          <input name="timezone" class="input-field" placeholder="e.g. GMT+1" />
+          <input required name="timezone" class="input-field" placeholder="e.g. GMT+1" />
         </label>
 
         <label class="grid gap-2">
