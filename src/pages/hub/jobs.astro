@@ -1,0 +1,102 @@
+---
+import HubLayout from "../../layouts/HubLayout.astro";
+---
+
+<HubLayout title="My jobs">
+  <div>
+    <h1 class="section-title">My jobs</h1>
+    <p class="mt-3 text-slate-300">Your delivery history from Trucky VTC Hub.</p>
+
+    <div class="mt-6 flex flex-wrap gap-3">
+      <label class="grid gap-1 text-sm text-slate-300">
+        Status
+        <select id="job-status" class="input-field w-auto min-w-[10rem]">
+          <option value="">All</option>
+          <option value="completed">Completed</option>
+          <option value="in_progress">In progress</option>
+          <option value="canceled">Canceled</option>
+        </select>
+      </label>
+      <button id="job-refresh" type="button" class="btn-secondary self-end">Refresh</button>
+    </div>
+
+    <p id="jobs-status" class="mt-4 text-sm text-slate-400">Loading jobs…</p>
+
+    <div class="panel mt-4 overflow-x-auto p-0">
+      <table class="w-full min-w-[36rem] text-left text-sm">
+        <thead class="border-b border-white/10 bg-[#0a2a8a]/40 text-slate-300">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Route</th>
+            <th class="px-4 py-3 font-semibold">Status</th>
+            <th class="px-4 py-3 font-semibold">Date</th>
+          </tr>
+        </thead>
+        <tbody id="jobs-body" class="divide-y divide-white/10"></tbody>
+      </table>
+    </div>
+  </div>
+</HubLayout>
+
+<script>
+  async function loadJobs() {
+    const statusEl = document.getElementById("jobs-status");
+    const bodyEl = document.getElementById("jobs-body");
+    const statusFilter = (document.getElementById("job-status") as HTMLSelectElement).value;
+    const user = window.netlifyIdentity?.currentUser();
+
+    if (!user || !bodyEl) return;
+
+    if (statusEl) statusEl.textContent = "Loading jobs…";
+    bodyEl.innerHTML = "";
+
+    const query = new URLSearchParams({ page: "1" });
+    if (statusFilter) query.set("status", statusFilter);
+
+    try {
+      const response = await fetch(`/api/my-jobs?${query.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${user.token.access_token}`
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (statusEl) statusEl.textContent = data.error ?? "Could not load jobs.";
+        return;
+      }
+
+      const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+
+      if (jobs.length === 0) {
+        if (statusEl) statusEl.textContent = "No jobs found for this filter.";
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = `Showing ${jobs.length} job(s).`;
+
+      bodyEl.innerHTML = jobs
+        .map(
+          (job: { from: string; to: string; status: string; date: string | null }) => `
+          <tr class="hover:bg-white/5">
+            <td class="px-4 py-3 text-white">${job.from} → ${job.to}</td>
+            <td class="px-4 py-3 capitalize text-slate-200">${job.status.replace("_", " ")}</td>
+            <td class="px-4 py-3 text-slate-400">${job.date ? new Date(job.date).toLocaleString() : "—"}</td>
+          </tr>`
+        )
+        .join("");
+    } catch {
+      if (statusEl) statusEl.textContent = "Could not reach the hub API.";
+    }
+  }
+
+  document.getElementById("job-refresh")?.addEventListener("click", loadJobs);
+  document.getElementById("job-status")?.addEventListener("change", loadJobs);
+
+  window.netlifyIdentity?.on("init", (user) => {
+    if (user) loadJobs();
+  });
+
+  if (window.netlifyIdentity?.currentUser()) {
+    loadJobs();
+  }
+</script>

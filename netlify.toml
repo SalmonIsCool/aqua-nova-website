@@ -4,6 +4,7 @@
 
 [functions]
   directory = "netlify/functions"
+  included_files = ["public/data/hub-drivers.json"]
 
 [dev]
   command = "npm run dev"
@@ -19,4 +20,14 @@
 [[redirects]]
   from = "/api/leaderboard"
   to = "/.netlify/functions/leaderboard"
+  status = 200
+
+[[redirects]]
+  from = "/api/my-stats"
+  to = "/.netlify/functions/my-stats"
+  status = 200
+
+[[redirects]]
+  from = "/api/my-jobs"
+  to = "/.netlify/functions/my-jobs"
   status = 200

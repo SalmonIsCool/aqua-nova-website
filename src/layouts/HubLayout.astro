@@ -1,0 +1,98 @@
+---
+import "../styles/global.css";
+import { siteConfig } from "../data/site";
+
+interface Props {
+  title: string;
+  requireAuth?: boolean;
+}
+
+const { title, requireAuth = true } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/assets/logo.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <title>{title} | {siteConfig.name} Hub</title>
+  </head>
+  <body class="min-h-screen text-white antialiased">
+    <header class="border-b border-white/10 bg-[#061a52]/90 backdrop-blur-md">
+      <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <a href="/hub" class="flex items-center gap-3">
+          <img src="/assets/logo.png" alt="" class="h-10 w-10 rounded-full" width="40" height="40" />
+          <span class="font-semibold text-cyan-300">Drivers Hub</span>
+        </a>
+        <nav class="flex items-center gap-2 text-sm sm:gap-4">
+          <a href="/hub" class="rounded-lg px-2 py-1.5 text-slate-200 transition hover:bg-white/10 hover:text-cyan-300 sm:px-3">Dashboard</a>
+          <a href="/hub/jobs" class="rounded-lg px-2 py-1.5 text-slate-200 transition hover:bg-white/10 hover:text-cyan-300 sm:px-3">My jobs</a>
+          <a href="/leaderboard" class="rounded-lg px-2 py-1.5 text-slate-200 transition hover:bg-white/10 hover:text-cyan-300 sm:px-3">Leaderboard</a>
+          <button id="hub-logout" type="button" class="btn-secondary px-3 py-1.5 text-xs sm:text-sm">Log out</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="section-shell-wide">
+      <slot />
+    </main>
+
+    <footer class="border-t border-white/10 px-6 py-6 text-center text-sm text-slate-400">
+      <a href="/" class="text-cyan-300 hover:text-cyan-200">← Back to main site</a>
+    </footer>
+
+    <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script is:inline define:vars={{ requireAuth }}>
+      function hubPath() {
+        return window.location.pathname;
+      }
+
+      function isHubLoginPage() {
+        return hubPath() === "/hub/login" || hubPath() === "/hub/login/";
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        if (!window.netlifyIdentity) return;
+
+        window.netlifyIdentity.on("init", function (user) {
+          var hash = window.location.hash || "";
+
+          if (!user && (hash.includes("invite_token") || hash.includes("confirmation_token"))) {
+            window.netlifyIdentity.open("signup");
+          }
+
+          if (requireAuth && !user && !isHubLoginPage()) {
+            window.location.href = "/hub/login";
+            return;
+          }
+
+          if (user && isHubLoginPage()) {
+            window.location.href = "/hub/";
+          }
+        });
+
+        window.netlifyIdentity.on("login", function () {
+          if (isHubLoginPage() || hubPath().startsWith("/hub")) {
+            window.location.href = "/hub/";
+          }
+        });
+
+        window.netlifyIdentity.on("logout", function () {
+          window.location.href = "/hub/login";
+        });
+
+        var logoutBtn = document.getElementById("hub-logout");
+        if (logoutBtn) {
+          logoutBtn.addEventListener("click", function () {
+            window.netlifyIdentity.logout();
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

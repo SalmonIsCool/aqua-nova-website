@@ -1,0 +1,42 @@
+---
+import HubLayout from "../../layouts/HubLayout.astro";
+import { siteConfig } from "../../data/site";
+---
+
+<HubLayout title="Login" requireAuth={false}>
+  <div class="mx-auto max-w-lg">
+    <h1 class="section-title">Drivers Hub</h1>
+    <p class="mt-4 text-base text-slate-300 sm:text-lg">
+      Sign in with the email and password you set after staff approved your application.
+    </p>
+
+    <article class="panel mt-8 space-y-4">
+      <p class="text-sm leading-relaxed text-slate-300">
+        <strong class="text-white">Invite-only access.</strong> We do not use Discord or Steam login. You only need the
+        account created for you after you are accepted into {siteConfig.name}.
+      </p>
+      <p class="text-sm leading-relaxed text-slate-300">
+        We never ask for passwords to external services. Your hub login is only for this website.
+      </p>
+
+      <button id="hub-login-btn" type="button" class="btn-primary w-full">Log in</button>
+      <button id="hub-recover-btn" type="button" class="btn-secondary w-full">Forgot password</button>
+    </article>
+
+    <p class="mt-6 text-sm text-slate-400">
+      Not approved yet?
+      <a href="/apply" class="text-cyan-300 hover:text-cyan-200">Apply to join</a>
+      first. Staff will invite you by email when accepted.
+    </p>
+  </div>
+</HubLayout>
+
+<script>
+  document.getElementById("hub-login-btn")?.addEventListener("click", () => {
+    window.netlifyIdentity?.open("login");
+  });
+
+  document.getElementById("hub-recover-btn")?.addEventListener("click", () => {
+    window.netlifyIdentity?.open("login");
+  });
+</script>

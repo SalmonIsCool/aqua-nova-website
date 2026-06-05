@@ -47,3 +47,18 @@ collections:
       - { label: "External URL", name: "url", widget: "string", required: false }
       - { label: "Excerpt", name: "excerpt", widget: "text" }
       - { label: "Body", name: "body", widget: "markdown" }
+
+  - name: "hub-drivers"
+    label: "Hub driver accounts"
+    files:
+      - file: "public/data/hub-drivers.json"
+        label: "Approved drivers"
+        name: "hub-drivers"
+        fields:
+          - label: "Drivers"
+            name: "drivers"
+            widget: "list"
+            fields:
+              - { label: "Email (same as Identity invite)", name: "email", widget: "string" }
+              - { label: "Trucky user ID", name: "truckyUserId", widget: "number" }
+              - { label: "Display name", name: "name", widget: "string" }
