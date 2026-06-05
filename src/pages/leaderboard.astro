@@ -1,0 +1,165 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { siteConfig } from "../data/site";
+
+const now = new Date();
+const currentMonth = now.getMonth() + 1;
+const currentYear = now.getFullYear();
+---
+
+<BaseLayout title={`${siteConfig.name} | Leaderboard`}>
+  <section class="section-shell-wide">
+    <h1 class="section-title">Driver leaderboard</h1>
+    <p class="mt-3 max-w-2xl text-base text-slate-300 sm:text-lg">
+      Live rankings from Trucky VTC Hub — distance, jobs, and revenue for Aqua Nova drivers.
+    </p>
+
+    <div class="mt-8 flex flex-wrap gap-3">
+      <label class="grid gap-1 text-sm text-slate-300">
+        Period
+        <select id="period" class="input-field w-auto min-w-[8rem]">
+          <option value="monthly" selected>Monthly</option>
+          <option value="weekly">Weekly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </label>
+      <label class="grid gap-1 text-sm text-slate-300">
+        Month
+        <select id="month" class="input-field w-auto min-w-[8rem]">
+          {
+            Array.from({ length: 12 }, (_, i) => {
+              const month = i + 1;
+              return (
+                <option value={month} selected={month === currentMonth}>
+                  {new Date(2000, i, 1).toLocaleString("en", { month: "long" })}
+                </option>
+              );
+            })
+          }
+        </select>
+      </label>
+      <label class="grid gap-1 text-sm text-slate-300">
+        Year
+        <select id="year" class="input-field w-auto min-w-[6rem]">
+          {
+            [currentYear - 1, currentYear, currentYear + 1].map((year) => (
+              <option value={year} selected={year === currentYear}>
+                {year}
+              </option>
+            ))
+          }
+        </select>
+      </label>
+      <label class="grid gap-1 text-sm text-slate-300">
+        Sort by
+        <select id="sort" class="input-field w-auto min-w-[8rem]">
+          <option value="distance" selected>Distance</option>
+          <option value="jobs">Jobs</option>
+          <option value="revenue">Revenue</option>
+        </select>
+      </label>
+      <button id="refresh" type="button" class="btn-secondary self-end">Refresh</button>
+    </div>
+
+    <div id="status" class="mt-6 text-sm text-slate-400">Loading leaderboard…</div>
+
+    <div class="panel mt-4 overflow-x-auto p-0">
+      <table class="w-full min-w-[40rem] text-left text-sm">
+        <thead class="border-b border-white/10 bg-[#0a2a8a]/40 text-slate-300">
+          <tr>
+            <th class="px-4 py-3 font-semibold">Rank</th>
+            <th class="px-4 py-3 font-semibold">Driver</th>
+            <th class="px-4 py-3 font-semibold">Distance</th>
+            <th class="px-4 py-3 font-semibold">Jobs</th>
+            <th class="px-4 py-3 font-semibold">Revenue</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body" class="divide-y divide-white/10"></tbody>
+      </table>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const statusEl = document.getElementById("status");
+  const bodyEl = document.getElementById("leaderboard-body");
+  const periodEl = document.getElementById("period") as HTMLSelectElement;
+  const monthEl = document.getElementById("month") as HTMLSelectElement;
+  const yearEl = document.getElementById("year") as HTMLSelectElement;
+  const sortEl = document.getElementById("sort") as HTMLSelectElement;
+  const refreshEl = document.getElementById("refresh");
+
+  const formatter = new Intl.NumberFormat("en-GB");
+
+  function formatDistance(km: number) {
+    return `${formatter.format(km)} km`;
+  }
+
+  function formatRevenue(value: number) {
+    return `€${formatter.format(value)}`;
+  }
+
+  async function loadLeaderboard() {
+    if (!statusEl || !bodyEl) return;
+
+    statusEl.textContent = "Loading leaderboard…";
+    bodyEl.innerHTML = "";
+
+    const query = new URLSearchParams({
+      period: periodEl.value,
+      month: monthEl.value,
+      year: yearEl.value,
+      sort: sortEl.value
+    });
+
+    try {
+      const response = await fetch(`/api/leaderboard?${query.toString()}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        const missing = Array.isArray(data.missing) ? ` Missing: ${data.missing.join(", ")}.` : "";
+        const hint = data.hint ? ` ${data.hint}` : "";
+        statusEl.textContent = `${data.error ?? "Failed to load leaderboard."}${missing}${hint}`;
+        return;
+      }
+
+      const drivers = Array.isArray(data.drivers) ? data.drivers : [];
+
+      if (drivers.length === 0) {
+        statusEl.textContent = "No driver stats for this period yet.";
+        return;
+      }
+
+      statusEl.textContent = `Showing ${drivers.length} drivers — ${data.period} ${data.month}/${data.year}`;
+
+      bodyEl.innerHTML = drivers
+        .map(
+          (driver: {
+            rank: number;
+            name: string;
+            drivenDistanceKm: number;
+            jobs: number;
+            revenue: number;
+          }) => `
+          <tr class="hover:bg-white/5">
+            <td class="px-4 py-3 font-semibold text-cyan-300">#${driver.rank}</td>
+            <td class="px-4 py-3 font-medium text-white">${driver.name}</td>
+            <td class="px-4 py-3 text-slate-200">${formatDistance(driver.drivenDistanceKm)}</td>
+            <td class="px-4 py-3 text-slate-200">${formatter.format(driver.jobs)}</td>
+            <td class="px-4 py-3 text-slate-200">${formatRevenue(driver.revenue)}</td>
+          </tr>`
+        )
+        .join("");
+    } catch {
+      statusEl.textContent = "Could not reach the leaderboard API. Try again shortly.";
+    }
+  }
+
+  refreshEl?.addEventListener("click", loadLeaderboard);
+  periodEl?.addEventListener("change", loadLeaderboard);
+  monthEl?.addEventListener("change", loadLeaderboard);
+  yearEl?.addEventListener("change", loadLeaderboard);
+  sortEl?.addEventListener("change", loadLeaderboard);
+
+  loadLeaderboard();
+</script>

@@ -9,16 +9,29 @@ interface Props {
 const { ctaHref = "/apply", ctaLabel = "Apply now" } = Astro.props;
 ---
 
-<section class="relative min-h-[22rem] overflow-hidden border-b border-white/10 sm:min-h-[26rem] md:min-h-[30rem]">
+<section class="relative min-h-[24rem] overflow-hidden border-b border-white/10 sm:min-h-[28rem] md:min-h-[32rem]">
   <div class="absolute inset-0">
     <img
-      src="/assets/banner.png"
-      alt=""
-      class="h-full w-full object-cover object-center"
+      src="/assets/hero-banner.png"
+      alt="Aqua Nova Transport convoy on the road"
+      class="h-full w-full scale-105 object-cover object-center"
       width="1920"
-      height="600"
+      height="1080"
+      fetchpriority="high"
     />
-    <div class="absolute inset-0 bg-gradient-to-r from-[#061a52]/95 via-[#0a2a8a]/80 to-[#061a52]/70"></div>
+    <!-- Brand blue overlay -->
+    <div
+      class="absolute inset-0 bg-gradient-to-br from-[#061a52]/92 via-[#0a2a8a]/78 to-[#08256f]/88"
+      aria-hidden="true"
+    ></div>
+    <div
+      class="absolute inset-0 bg-gradient-to-t from-[#020617]/90 via-transparent to-[#061a52]/40"
+      aria-hidden="true"
+    ></div>
+    <div
+      class="absolute inset-0 bg-cyan-500/10 mix-blend-soft-light"
+      aria-hidden="true"
+    ></div>
   </div>
 
   <div class="relative mx-auto flex w-full max-w-7xl flex-col items-center gap-8 px-6 py-16 text-center sm:py-20 md:flex-row md:py-24 md:text-left lg:gap-12">
@@ -31,10 +44,10 @@ const { ctaHref = "/apply", ctaLabel = "Apply now" } = Astro.props;
     />
     <div class="max-w-2xl">
       <p class="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-200">Virtual Trucking Company</p>
-      <h1 class="mt-2 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+      <h1 class="mt-2 text-4xl font-extrabold tracking-tight text-white drop-shadow-sm sm:text-5xl lg:text-6xl">
         {siteConfig.name}
       </h1>
-      <p class="mt-4 text-lg text-slate-200 sm:text-xl">{siteConfig.tagline}</p>
+      <p class="mt-4 text-lg text-slate-100 drop-shadow-sm sm:text-xl">{siteConfig.tagline}</p>
       <div class="mt-8 flex flex-col items-center gap-3 sm:flex-row md:justify-start">
         <a href={ctaHref} class="btn-primary w-full sm:w-auto">{ctaLabel}</a>
         <a href={siteConfig.discordInvite} target="_blank" rel="noreferrer" class="btn-secondary w-full sm:w-auto">

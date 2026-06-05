@@ -12,6 +12,7 @@ export const navLinks = [
   { href: "/", label: "Home" },
   { href: "/apply", label: "Apply" },
   { href: "/news", label: "Announcements" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/events", label: "Events" },
   { href: "/media", label: "Media" },
   { href: "/discord", label: "Discord" },
