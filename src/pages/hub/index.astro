@@ -35,30 +35,25 @@ import HubLayout from "../../layouts/HubLayout.astro";
 </HubLayout>
 
 <script>
+  import { getAuthHeaders, onIdentityReady } from "../../scripts/hub-auth";
+
   const formatter = new Intl.NumberFormat("en-GB");
 
   async function loadDashboard() {
     const greeting = document.getElementById("hub-greeting");
     const status = document.getElementById("hub-status");
-    const user = window.netlifyIdentity?.currentUser();
-
-    if (!user) return;
-
-    if (greeting) {
-      greeting.textContent = `Welcome back, ${user.user_metadata?.full_name || user.email}.`;
-    }
 
     try {
-      const response = await fetch("/api/my-stats", {
-        headers: {
-          Authorization: `Bearer ${user.token.access_token}`
-        }
-      });
+      const response = await fetch("/api/my-stats", { headers: getAuthHeaders() });
       const data = await response.json();
 
       if (!response.ok) {
         if (status) status.textContent = data.error ?? "Could not load your stats.";
         return;
+      }
+
+      if (greeting) {
+        greeting.textContent = `Welcome back, ${data.driver?.name ?? "driver"}.`;
       }
 
       const stats = data.stats ?? {};
@@ -75,11 +70,7 @@ import HubLayout from "../../layouts/HubLayout.astro";
     }
   }
 
-  window.netlifyIdentity?.on("init", (user) => {
+  onIdentityReady((user) => {
     if (user) loadDashboard();
   });
-
-  if (window.netlifyIdentity?.currentUser()) {
-    loadDashboard();
-  }
 </script>

@@ -49,10 +49,10 @@ const { title, description = "Aqua Nova Transport virtual trucking company websi
 
           window.netlifyIdentity.on("login", function () {
             var path = window.location.pathname;
-            if (path.startsWith("/hub")) {
-              window.location.href = "/hub/";
-            } else if (path.startsWith("/admin")) {
+            if (path.startsWith("/admin")) {
               window.location.href = "/admin/";
+            } else if (path === "/hub/login" || path === "/hub/login/") {
+              window.location.href = "/hub/";
             }
           });
         });

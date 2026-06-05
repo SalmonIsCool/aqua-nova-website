@@ -1,0 +1,296 @@
+---
+import HubLayout from "../../layouts/HubLayout.astro";
+---
+
+<HubLayout title="Job details">
+  <div>
+    <a href="/hub/jobs" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to my jobs</a>
+    <h1 id="job-title" class="section-title mt-4">Job details</h1>
+    <p id="job-status-line" class="mt-2 text-slate-400">Loading…</p>
+    <div id="job-sections" class="mt-8 grid gap-6"></div>
+    <div id="job-events-wrap" class="mt-8 hidden">
+      <h2 class="text-xl font-semibold text-cyan-300">Job events</h2>
+      <div id="job-events" class="panel mt-4 overflow-x-auto"></div>
+    </div>
+  </div>
+</HubLayout>
+
+<script>
+  import { getAuthHeaders, onIdentityReady } from "../../scripts/hub-auth";
+
+  const formatter = new Intl.NumberFormat("en-GB");
+
+  const sections: { title: string; fields: string[] }[] = [
+    {
+      title: "Route",
+      fields: [
+        "source_city_name",
+        "destination_city_name",
+        "source_company_name",
+        "destination_company_name",
+        "planned_distance_km",
+        "driven_distance_km"
+      ]
+    },
+    {
+      title: "Cargo",
+      fields: ["cargo_name", "cargo_mass", "cargo_mass_t", "cargo_unit_count", "cargo_unit_mass", "cargo_damage"]
+    },
+    {
+      title: "Vehicle & trailer",
+      fields: [
+        "vehicle_brand_name",
+        "vehicle_model_name",
+        "trailer_name",
+        "trailer_body_type",
+        "trailer_chain_type",
+        "vehicle_odometer_start",
+        "vehicle_odometer_end"
+      ]
+    },
+    {
+      title: "Financials",
+      fields: [
+        "revenue",
+        "income",
+        "game_income",
+        "taxes",
+        "fuel_cost",
+        "fuel_used_l",
+        "rent_cost_total",
+        "rent_cost_per_km",
+        "other_costs_total",
+        "damage_cost",
+        "currency"
+      ]
+    },
+    {
+      title: "Damage",
+      fields: ["vehicle_damage", "trailers_damage", "cargo_damage", "damage_cost_details"]
+    },
+    {
+      title: "Timing",
+      fields: [
+        "created_at",
+        "started_at",
+        "completed_at",
+        "canceled_at",
+        "real_driving_time_seconds",
+        "late_delivery",
+        "in_game_delivery_time"
+      ]
+    },
+    {
+      title: "Game info",
+      fields: [
+        "game_id",
+        "market",
+        "game_mode",
+        "server",
+        "in_game_profile_name",
+        "max_speed",
+        "average_speed_kmh",
+        "auto_load",
+        "auto_park",
+        "warp"
+      ]
+    }
+  ];
+
+  const labels: Record<string, string> = {
+    source_city_name: "From city",
+    destination_city_name: "To city",
+    source_company_name: "From company",
+    destination_company_name: "To company",
+    planned_distance_km: "Planned distance (km)",
+    driven_distance_km: "Driven distance (km)",
+    cargo_name: "Cargo",
+    cargo_mass: "Cargo mass",
+    cargo_mass_t: "Cargo mass (t)",
+    cargo_unit_count: "Cargo units",
+    cargo_unit_mass: "Unit mass",
+    vehicle_brand_name: "Truck brand",
+    vehicle_model_name: "Truck model",
+    trailer_name: "Trailer",
+    trailer_body_type: "Trailer body",
+    trailer_chain_type: "Trailer chain",
+    vehicle_odometer_start: "Odometer start",
+    vehicle_odometer_end: "Odometer end",
+    revenue: "Revenue",
+    income: "Income",
+    game_income: "Game income",
+    taxes: "Taxes",
+    fuel_cost: "Fuel cost",
+    fuel_used_l: "Fuel used (L)",
+    rent_cost_total: "Rent total",
+    rent_cost_per_km: "Rent per km",
+    other_costs_total: "Other costs",
+    damage_cost: "Damage cost",
+    currency: "Currency",
+    vehicle_damage: "Vehicle damage",
+    trailers_damage: "Trailer damage",
+    cargo_damage: "Cargo damage",
+    damage_cost_details: "Damage details",
+    created_at: "Created",
+    started_at: "Started",
+    completed_at: "Completed",
+    canceled_at: "Canceled",
+    real_driving_time_seconds: "Real driving time (sec)",
+    late_delivery: "Late delivery",
+    in_game_delivery_time: "In-game delivery time",
+    game_id: "Game",
+    market: "Market",
+    game_mode: "Game mode",
+    server: "Server",
+    in_game_profile_name: "In-game profile",
+    max_speed: "Max speed",
+    average_speed_kmh: "Average speed (km/h)",
+    auto_load: "Auto load",
+    auto_park: "Auto park",
+    warp: "Warp",
+    status: "Status",
+    stats_type: "Stats type",
+    special_job: "Special job"
+  };
+
+  function formatValue(key: string, value: unknown) {
+    if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (key.includes("_at") && typeof value === "string") return new Date(value).toLocaleString();
+    if (key === "game_id") return Number(value) === 1 ? "ETS2" : Number(value) === 2 ? "ATS" : String(value);
+    if (typeof value === "number") return formatter.format(value);
+    if (typeof value === "object") return JSON.stringify(value, null, 2);
+    return String(value);
+  }
+
+  function renderSection(title: string, job: Record<string, unknown>, fields: string[]) {
+    const rows = fields
+      .map((field) => {
+        const value = job[field];
+        if (value === null || value === undefined || value === "") return "";
+        return `<div class="flex flex-col gap-1 border-b border-white/5 py-3 sm:flex-row sm:justify-between">
+          <dt class="text-slate-400">${labels[field] ?? field}</dt>
+          <dd class="font-medium text-white sm:text-right">${formatValue(field, value)}</dd>
+        </div>`;
+      })
+      .filter(Boolean)
+      .join("");
+
+    if (!rows) return "";
+
+    return `<article class="panel">
+      <h2 class="text-lg font-semibold text-cyan-300">${title}</h2>
+      <dl class="mt-3">${rows}</dl>
+    </article>`;
+  }
+
+  function renderExtras(job: Record<string, unknown>, usedFields: Set<string>) {
+    const skip = new Set([...usedFields, "id", "user_id", "company_id", "driver", "company", "vehicle", "events", "cargo_definition", "income_details", "fines_details", "transports_details", "tollgates_details", "deleted_at", "updated_at"]);
+    const extras = Object.entries(job).filter(([key, value]) => {
+      if (skip.has(key)) return false;
+      if (value === null || value === undefined || value === "") return false;
+      return typeof value !== "object";
+    });
+
+    if (extras.length === 0) return "";
+
+    const rows = extras
+      .map(
+        ([key, value]) => `<div class="flex flex-col gap-1 border-b border-white/5 py-3 sm:flex-row sm:justify-between">
+          <dt class="text-slate-400">${labels[key] ?? key}</dt>
+          <dd class="font-medium text-white sm:text-right">${formatValue(key, value)}</dd>
+        </div>`
+      )
+      .join("");
+
+    return `<article class="panel">
+      <h2 class="text-lg font-semibold text-cyan-300">Additional details</h2>
+      <dl class="mt-3">${rows}</dl>
+    </article>`;
+  }
+
+  function renderNested(label: string, obj: Record<string, unknown> | null | undefined) {
+    if (!obj || typeof obj !== "object") return "";
+    const rows = Object.entries(obj)
+      .filter(([, value]) => value !== null && value !== undefined && value !== "")
+      .map(
+        ([key, value]) => `<div class="flex flex-col gap-1 border-b border-white/5 py-2 sm:flex-row sm:justify-between">
+          <dt class="text-slate-400">${key}</dt>
+          <dd class="text-white sm:text-right">${typeof value === "object" ? JSON.stringify(value) : String(value)}</dd>
+        </div>`
+      )
+      .join("");
+
+    if (!rows) return "";
+
+    return `<article class="panel">
+      <h2 class="text-lg font-semibold text-cyan-300">${label}</h2>
+      <dl class="mt-3">${rows}</dl>
+    </article>`;
+  }
+
+  async function loadJob() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const title = document.getElementById("job-title");
+    const statusLine = document.getElementById("job-status-line");
+    const sectionsEl = document.getElementById("job-sections");
+
+    if (!id) {
+      if (statusLine) statusLine.textContent = "No job ID provided.";
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/my-job?id=${encodeURIComponent(id)}`, { headers: getAuthHeaders() });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (statusLine) statusLine.textContent = data.error ?? "Could not load job.";
+        return;
+      }
+
+      const job = data.job as Record<string, unknown>;
+      const usedFields = new Set<string>(["status"]);
+
+      if (title) {
+        title.textContent = `${job.source_city_name ?? "Unknown"} → ${job.destination_city_name ?? "Unknown"}`;
+      }
+      if (statusLine) {
+        statusLine.textContent = `Job #${job.id} · ${String(job.status ?? "").replace("_", " ")}`;
+      }
+
+      const html = [
+        renderSection("Overview", job, ["status", "stats_type", "special_job"]),
+        ...sections.map((section) => {
+          section.fields.forEach((field) => usedFields.add(field));
+          return renderSection(section.title, job, section.fields);
+        }),
+        renderNested("Driver", job.driver as Record<string, unknown>),
+        renderNested("Vehicle", job.vehicle as Record<string, unknown>),
+        renderNested("Company", job.company as Record<string, unknown>),
+        job.income_details ? renderNested("Income details", job.income_details as Record<string, unknown>) : "",
+        renderExtras(job, usedFields)
+      ]
+        .filter(Boolean)
+        .join("");
+
+      if (sectionsEl) sectionsEl.innerHTML = html;
+
+      const events = Array.isArray(data.events) ? data.events : [];
+      if (events.length > 0) {
+        document.getElementById("job-events-wrap")?.classList.remove("hidden");
+        const eventsEl = document.getElementById("job-events");
+        if (eventsEl) {
+          eventsEl.innerHTML = `<pre class="overflow-x-auto text-xs text-slate-200">${JSON.stringify(events, null, 2)}</pre>`;
+        }
+      }
+    } catch {
+      if (statusLine) statusLine.textContent = "Could not reach the hub API.";
+    }
+  }
+
+  onIdentityReady((user) => {
+    if (user) loadJob();
+  });
+</script>

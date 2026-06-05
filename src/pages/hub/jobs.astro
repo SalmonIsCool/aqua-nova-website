@@ -5,7 +5,7 @@ import HubLayout from "../../layouts/HubLayout.astro";
 <HubLayout title="My jobs">
   <div>
     <h1 class="section-title">My jobs</h1>
-    <p class="mt-3 text-slate-300">Your delivery history from Trucky VTC Hub.</p>
+    <p class="mt-3 text-slate-300">Your delivery history from Trucky VTC Hub. Click a job for full details.</p>
 
     <div class="mt-6 flex flex-wrap gap-3">
       <label class="grid gap-1 text-sm text-slate-300">
@@ -38,13 +38,14 @@ import HubLayout from "../../layouts/HubLayout.astro";
 </HubLayout>
 
 <script>
+  import { getAuthHeaders, onIdentityReady } from "../../scripts/hub-auth";
+
   async function loadJobs() {
     const statusEl = document.getElementById("jobs-status");
     const bodyEl = document.getElementById("jobs-body");
     const statusFilter = (document.getElementById("job-status") as HTMLSelectElement).value;
-    const user = window.netlifyIdentity?.currentUser();
 
-    if (!user || !bodyEl) return;
+    if (!bodyEl) return;
 
     if (statusEl) statusEl.textContent = "Loading jobs…";
     bodyEl.innerHTML = "";
@@ -53,11 +54,7 @@ import HubLayout from "../../layouts/HubLayout.astro";
     if (statusFilter) query.set("status", statusFilter);
 
     try {
-      const response = await fetch(`/api/my-jobs?${query.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${user.token.access_token}`
-        }
-      });
+      const response = await fetch(`/api/my-jobs?${query.toString()}`, { headers: getAuthHeaders() });
       const data = await response.json();
 
       if (!response.ok) {
@@ -72,18 +69,25 @@ import HubLayout from "../../layouts/HubLayout.astro";
         return;
       }
 
-      if (statusEl) statusEl.textContent = `Showing ${jobs.length} job(s).`;
+      if (statusEl) statusEl.textContent = `Showing ${jobs.length} job(s). Click a row for details.`;
 
       bodyEl.innerHTML = jobs
         .map(
-          (job: { from: string; to: string; status: string; date: string | null }) => `
-          <tr class="hover:bg-white/5">
-            <td class="px-4 py-3 text-white">${job.from} → ${job.to}</td>
+          (job: { id: number; from: string; to: string; status: string; date: string | null }) => `
+          <tr class="cursor-pointer transition hover:bg-cyan-950/30" data-job-id="${job.id}">
+            <td class="px-4 py-3 text-cyan-200">${job.from} → ${job.to}</td>
             <td class="px-4 py-3 capitalize text-slate-200">${job.status.replace("_", " ")}</td>
             <td class="px-4 py-3 text-slate-400">${job.date ? new Date(job.date).toLocaleString() : "—"}</td>
           </tr>`
         )
         .join("");
+
+      bodyEl.querySelectorAll("[data-job-id]").forEach((row) => {
+        row.addEventListener("click", () => {
+          const id = row.getAttribute("data-job-id");
+          if (id) window.location.href = `/hub/job?id=${id}`;
+        });
+      });
     } catch {
       if (statusEl) statusEl.textContent = "Could not reach the hub API.";
     }
@@ -92,11 +96,7 @@ import HubLayout from "../../layouts/HubLayout.astro";
   document.getElementById("job-refresh")?.addEventListener("click", loadJobs);
   document.getElementById("job-status")?.addEventListener("change", loadJobs);
 
-  window.netlifyIdentity?.on("init", (user) => {
+  onIdentityReady((user) => {
     if (user) loadJobs();
   });
-
-  if (window.netlifyIdentity?.currentUser()) {
-    loadJobs();
-  }
 </script>

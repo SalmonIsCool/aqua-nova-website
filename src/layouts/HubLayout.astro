@@ -22,7 +22,7 @@ const { title, requireAuth = true } = Astro.props;
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
     <title>{title} | {siteConfig.name} Hub</title>
   </head>
-  <body class="min-h-screen text-white antialiased">
+  <body class="min-h-screen text-white antialiased" data-require-auth={requireAuth ? "true" : "false"}>
     <header class="border-b border-white/10 bg-[#061a52]/90 backdrop-blur-md">
       <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <a href="/hub" class="flex items-center gap-3">
@@ -47,50 +47,21 @@ const { title, requireAuth = true } = Astro.props;
     </footer>
 
     <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <script is:inline define:vars={{ requireAuth }}>
-      function hubPath() {
-        return window.location.pathname;
-      }
+    <script>
+      import { setupHubRouteGuard } from "../scripts/hub-auth";
 
-      function isHubLoginPage() {
-        return hubPath() === "/hub/login" || hubPath() === "/hub/login/";
-      }
+      const requireAuth = document.body.dataset.requireAuth === "true";
+      setupHubRouteGuard(requireAuth);
 
-      document.addEventListener("DOMContentLoaded", function () {
-        if (!window.netlifyIdentity) return;
+      document.getElementById("hub-logout")?.addEventListener("click", () => {
+        window.netlifyIdentity?.logout();
+        window.location.href = "/hub/login";
+      });
 
-        window.netlifyIdentity.on("init", function (user) {
-          var hash = window.location.hash || "";
-
-          if (!user && (hash.includes("invite_token") || hash.includes("confirmation_token"))) {
-            window.netlifyIdentity.open("signup");
-          }
-
-          if (requireAuth && !user && !isHubLoginPage()) {
-            window.location.href = "/hub/login";
-            return;
-          }
-
-          if (user && isHubLoginPage()) {
-            window.location.href = "/hub/";
-          }
-        });
-
-        window.netlifyIdentity.on("login", function () {
-          if (isHubLoginPage() || hubPath().startsWith("/hub")) {
-            window.location.href = "/hub/";
-          }
-        });
-
-        window.netlifyIdentity.on("logout", function () {
-          window.location.href = "/hub/login";
-        });
-
-        var logoutBtn = document.getElementById("hub-logout");
-        if (logoutBtn) {
-          logoutBtn.addEventListener("click", function () {
-            window.netlifyIdentity.logout();
-          });
+      window.netlifyIdentity?.on("init", (user) => {
+        const hash = window.location.hash || "";
+        if (!user && (hash.includes("invite_token") || hash.includes("confirmation_token"))) {
+          window.netlifyIdentity?.open("signup");
         }
       });
     </script>
