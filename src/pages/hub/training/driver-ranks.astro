@@ -24,9 +24,14 @@ const ranks = [...driverRanks].reverse();
     <ul class="mt-4 space-y-2">
       {
         ranks.map((rank) => (
-          <li class={`flex items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-white ${rank.color}`}>
+          <li
+            class="flex items-center justify-between rounded-lg border border-white/10 bg-[#081638]/50 px-4 py-3 text-sm font-semibold"
+            style={`color: ${rank.color}`}
+          >
             <span>{rank.name}</span>
-            <span>{rank.minKm === 0 ? "0 km" : `${rank.minKm.toLocaleString("en-GB")} km`}</span>
+            <span class="text-white/80">
+              {rank.minKm === 0 ? "0 km" : `${rank.minKm.toLocaleString("en-GB")} km`}
+            </span>
           </li>
         ))
       }

@@ -327,8 +327,8 @@ summary:focus-visible {
   @apply h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-300 transition-all;
 }
 
-.hub-rank-name {
-  @apply text-lg font-bold text-white;
+.hub-rank-pill {
+  @apply inline-flex rounded-lg border px-3 py-2 text-base font-bold;
 }
 
 .hub-table-wrap {

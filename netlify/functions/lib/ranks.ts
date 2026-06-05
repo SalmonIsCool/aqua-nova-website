@@ -1,21 +1,27 @@
 export interface DriverRank {
   name: string;
   minKm: number;
+  color: string;
 }
 
 export const driverRanks: DriverRank[] = [
-  { name: "Trainee Driver", minKm: 0 },
-  { name: "Novice Driver", minKm: 5_000 },
-  { name: "Licensed Driver", minKm: 25_000 },
-  { name: "Experienced Driver", minKm: 50_000 },
-  { name: "Skilled Driver", minKm: 100_000 },
-  { name: "Master Driver", minKm: 150_000 },
-  { name: "Veteran Driver", minKm: 250_000 },
-  { name: "Expert Driver", minKm: 500_000 },
-  { name: "Legendary Driver", minKm: 750_000 },
-  { name: "Professional Driver", minKm: 1_000_000 },
-  { name: "Grandmaster Driver", minKm: 1_500_000 }
+  { name: "Trainee Driver", minKm: 0, color: "#C0CA33" },
+  { name: "Novice Driver", minKm: 5_000, color: "#26A69A" },
+  { name: "Licensed Driver", minKm: 25_000, color: "#4CAF50" },
+  { name: "Experienced Driver", minKm: 50_000, color: "#76FF03" },
+  { name: "Skilled Driver", minKm: 100_000, color: "#00BCD4" },
+  { name: "Master Driver", minKm: 150_000, color: "#2196F3" },
+  { name: "Veteran Driver", minKm: 250_000, color: "#3F51B5" },
+  { name: "Expert Driver", minKm: 500_000, color: "#9C27B0" },
+  { name: "Legendary Driver", minKm: 750_000, color: "#E91E63" },
+  { name: "Professional Driver", minKm: 1_000_000, color: "#B71C1C" },
+  { name: "Grandmaster Driver", minKm: 1_500_000, color: "#F44336" }
 ];
+
+export function toRankDistanceKm(distance: number, unit: "km" | "mi" = "km") {
+  const value = Math.max(0, Number(distance) || 0);
+  return unit === "mi" ? Math.round(value * 1.60934) : Math.round(value);
+}
 
 export function getRankProgress(totalDistanceKm: number) {
   const totalKm = Math.max(0, Math.round(totalDistanceKm));
@@ -34,7 +40,11 @@ export function getRankProgress(totalDistanceKm: number) {
   if (!next) {
     return {
       currentName: current.name,
+      currentColor: current.color,
+      currentMinKm: current.minKm,
       nextName: null,
+      nextColor: null,
+      nextMinKm: null,
       totalDistanceKm: totalKm,
       progressPercent: 100,
       remainingKm: 0
@@ -43,14 +53,17 @@ export function getRankProgress(totalDistanceKm: number) {
 
   const span = next.minKm - current.minKm;
   const gained = totalKm - current.minKm;
-  const progressPercent = span > 0 ? Math.min(Math.round((gained / span) * 100), 100) : 0;
+  const progressPercent = span > 0 ? Math.min(Math.floor((gained / span) * 100), 100) : 0;
 
   return {
     currentName: current.name,
+    currentColor: current.color,
+    currentMinKm: current.minKm,
     nextName: next.name,
+    nextColor: next.color,
+    nextMinKm: next.minKm,
     totalDistanceKm: totalKm,
     progressPercent,
-    remainingKm: Math.max(next.minKm - totalKm, 0),
-    nextRankAtKm: next.minKm
+    remainingKm: Math.max(next.minKm - totalKm, 0)
   };
 }

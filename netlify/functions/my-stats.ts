@@ -1,6 +1,6 @@
 import type { Handler } from "@netlify/functions";
 import { authenticateHubRequest } from "./lib/auth";
-import { getRankProgress } from "./lib/ranks";
+import { getRankProgress, toRankDistanceKm } from "./lib/ranks";
 import { truckyFetch } from "./lib/trucky";
 
 function json(statusCode: number, body: unknown) {
@@ -50,7 +50,8 @@ export const handler: Handler = async (event, context) => {
     let totalDistanceKm = 0;
     if (userResponse.ok) {
       const userData = await userResponse.json();
-      totalDistanceKm = Math.round(Number(userData.total_driven_distance ?? 0));
+      // Trucky rank thresholds are in km; total_driven_distance is stored in km.
+      totalDistanceKm = toRankDistanceKm(Number(userData.total_driven_distance ?? 0), "km");
     }
 
     return json(200, {

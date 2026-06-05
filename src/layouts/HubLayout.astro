@@ -77,7 +77,10 @@ const breadcrumbs = Astro.props.breadcrumbs ?? [{ label: "Home", href: "/hub/" }
             setHubProfile(data.driver.name);
             if (data.rank?.currentName) {
               const rankEl = document.getElementById("hub-sidebar-rank");
-              if (rankEl) rankEl.textContent = data.rank.currentName;
+              if (rankEl) {
+                rankEl.textContent = data.rank.currentName;
+                if (data.rank.currentColor) rankEl.style.color = data.rank.currentColor;
+              }
             }
             return;
           }

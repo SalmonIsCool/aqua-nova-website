@@ -2,22 +2,21 @@ export interface DriverRank {
   name: string;
   minKm: number;
   color: string;
-  textColor: string;
 }
 
-/** Aqua Nova ranks from Trucky VTC Hub (min distance logged in km). */
+/** Aqua Nova ranks from Trucky VTC Hub — colours match the Ranks admin table. */
 export const driverRanks: DriverRank[] = [
-  { name: "Trainee Driver", minKm: 0, color: "bg-lime-700", textColor: "text-lime-200" },
-  { name: "Novice Driver", minKm: 5_000, color: "bg-teal-700", textColor: "text-teal-200" },
-  { name: "Licensed Driver", minKm: 25_000, color: "bg-green-700", textColor: "text-green-200" },
-  { name: "Experienced Driver", minKm: 50_000, color: "bg-emerald-600", textColor: "text-emerald-100" },
-  { name: "Skilled Driver", minKm: 100_000, color: "bg-cyan-700", textColor: "text-cyan-100" },
-  { name: "Master Driver", minKm: 150_000, color: "bg-sky-600", textColor: "text-sky-100" },
-  { name: "Veteran Driver", minKm: 250_000, color: "bg-blue-600", textColor: "text-blue-100" },
-  { name: "Expert Driver", minKm: 500_000, color: "bg-indigo-600", textColor: "text-indigo-100" },
-  { name: "Legendary Driver", minKm: 750_000, color: "bg-purple-600", textColor: "text-purple-100" },
-  { name: "Professional Driver", minKm: 1_000_000, color: "bg-pink-600", textColor: "text-pink-100" },
-  { name: "Grandmaster Driver", minKm: 1_500_000, color: "bg-rose-600", textColor: "text-rose-100" }
+  { name: "Trainee Driver", minKm: 0, color: "#C0CA33" },
+  { name: "Novice Driver", minKm: 5_000, color: "#26A69A" },
+  { name: "Licensed Driver", minKm: 25_000, color: "#4CAF50" },
+  { name: "Experienced Driver", minKm: 50_000, color: "#76FF03" },
+  { name: "Skilled Driver", minKm: 100_000, color: "#00BCD4" },
+  { name: "Master Driver", minKm: 150_000, color: "#2196F3" },
+  { name: "Veteran Driver", minKm: 250_000, color: "#3F51B5" },
+  { name: "Expert Driver", minKm: 500_000, color: "#9C27B0" },
+  { name: "Legendary Driver", minKm: 750_000, color: "#E91E63" },
+  { name: "Professional Driver", minKm: 1_000_000, color: "#B71C1C" },
+  { name: "Grandmaster Driver", minKm: 1_500_000, color: "#F44336" }
 ];
 
 export interface RankProgress {
@@ -54,7 +53,7 @@ export function getRankProgress(totalDistanceKm: number): RankProgress {
 
   const span = next.minKm - current.minKm;
   const gained = totalKm - current.minKm;
-  const progressPercent = span > 0 ? Math.min(Math.round((gained / span) * 100), 100) : 0;
+  const progressPercent = span > 0 ? Math.min(Math.floor((gained / span) * 100), 100) : 0;
   const remainingKm = Math.max(next.minKm - totalKm, 0);
 
   return {

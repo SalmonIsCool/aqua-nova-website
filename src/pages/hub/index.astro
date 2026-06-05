@@ -43,8 +43,8 @@ const upcomingEvent = events[0] ?? null;
       <article class="hub-stat-card">
         <div class="hub-stat-card__icon">🛣</div>
         <div>
-          <p class="hub-stat-card__value" id="company-miles">—</p>
-          <p class="hub-stat-card__label">Miles</p>
+          <p class="hub-stat-card__value" id="company-distance">—</p>
+          <p class="hub-stat-card__label">Km</p>
         </div>
       </article>
       </div>
@@ -61,7 +61,7 @@ const upcomingEvent = events[0] ?? null;
       <article class="hub-mini-stat">
         <p class="text-2xl">🛣</p>
         <p class="mt-2 text-xl font-bold text-white" id="stat-distance">—</p>
-        <p class="text-sm text-slate-400">Miles</p>
+        <p class="text-sm text-slate-400">Km</p>
       </article>
       <article class="hub-mini-stat">
         <p class="text-2xl">📅</p>
@@ -83,15 +83,15 @@ const upcomingEvent = events[0] ?? null;
           <div class="mt-5 grid gap-4 sm:grid-cols-2">
             <div class="rounded-xl border border-white/10 bg-[#081638]/60 p-4">
               <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Current rank</p>
-              <p class="hub-rank-name mt-2" id="rank-current">—</p>
-              <p class="mt-2 text-sm text-slate-400">
+              <p class="hub-rank-pill mt-3" id="rank-current">—</p>
+              <p class="mt-3 text-sm text-slate-400">
                 <span id="rank-total-km">—</span> km logged
               </p>
             </div>
             <div class="rounded-xl border border-white/10 bg-[#081638]/60 p-4">
               <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Next rank</p>
-              <p class="hub-rank-name mt-2 text-cyan-300" id="rank-next">—</p>
-              <p class="mt-2 text-sm text-slate-400" id="rank-remaining-label">—</p>
+              <p class="hub-rank-pill mt-3" id="rank-next">—</p>
+              <p class="mt-3 text-sm text-slate-400" id="rank-remaining-label">—</p>
             </div>
           </div>
           <div class="mt-5">
@@ -177,9 +177,19 @@ const upcomingEvent = events[0] ?? null;
     return "Good evening";
   }
 
+  function applyRankPill(element: HTMLElement | null, name: string, color: string) {
+    if (!element) return;
+    element.textContent = name;
+    element.style.color = color;
+    element.style.borderColor = `${color}66`;
+    element.style.backgroundColor = `${color}22`;
+  }
+
   function renderRankProgress(rank: {
     currentName: string;
+    currentColor: string;
     nextName: string | null;
+    nextColor: string | null;
     totalDistanceKm: number;
     progressPercent: number;
     remainingKm: number;
@@ -192,24 +202,35 @@ const upcomingEvent = events[0] ?? null;
     const progressBar = document.getElementById("rank-progress-bar");
     const sidebarRank = document.getElementById("hub-sidebar-rank");
 
-    if (currentEl) currentEl.textContent = rank.currentName;
+    applyRankPill(currentEl, rank.currentName, rank.currentColor);
     if (totalKmEl) totalKmEl.textContent = fullFormatter.format(rank.totalDistanceKm);
-    if (sidebarRank) sidebarRank.textContent = rank.currentName;
+    if (sidebarRank) {
+      sidebarRank.textContent = rank.currentName;
+      sidebarRank.style.color = rank.currentColor;
+    }
 
-    if (!rank.nextName) {
-      if (nextEl) nextEl.textContent = "Max rank";
+    if (!rank.nextName || !rank.nextColor) {
+      applyRankPill(nextEl, "Max rank", rank.currentColor);
       if (remainingLabel) remainingLabel.textContent = "You have reached the highest driver rank.";
       if (progressLabel) progressLabel.textContent = "100%";
-      if (progressBar) progressBar.style.width = "100%";
+      if (progressBar) {
+        progressBar.style.width = "100%";
+        progressBar.style.background = rank.currentColor;
+      }
       return;
     }
 
-    if (nextEl) nextEl.textContent = rank.nextName;
+    applyRankPill(nextEl, rank.nextName, rank.nextColor);
     if (remainingLabel) {
-      remainingLabel.textContent = `${fullFormatter.format(rank.remainingKm)} km to go`;
+      remainingLabel.textContent = `${fullFormatter.format(rank.remainingKm)} km remaining (${rank.progressPercent}%)`;
     }
-    if (progressLabel) progressLabel.textContent = `${rank.progressPercent}%`;
-    if (progressBar) progressBar.style.width = `${rank.progressPercent}%`;
+    if (progressLabel) {
+      progressLabel.textContent = `${rank.progressPercent}%`;
+    }
+    if (progressBar) {
+      progressBar.style.width = `${rank.progressPercent}%`;
+      progressBar.style.background = `linear-gradient(90deg, ${rank.currentColor}, ${rank.nextColor})`;
+    }
   }
 
   function formatCountdown(targetIso: string) {
@@ -263,14 +284,13 @@ const upcomingEvent = events[0] ?? null;
           (sum: number, d: { drivenDistanceKm?: number }) => sum + (d.drivenDistanceKm ?? 0),
           0
         );
-        const totalMi = Math.round(totalKm * 0.621371);
 
         const driversEl = document.getElementById("company-drivers");
         const jobsEl = document.getElementById("company-jobs");
-        const milesEl = document.getElementById("company-miles");
+        const distanceEl = document.getElementById("company-distance");
         if (driversEl) driversEl.textContent = fullFormatter.format(drivers.length);
         if (jobsEl) jobsEl.textContent = formatter.format(totalJobs);
-        if (milesEl) milesEl.textContent = formatter.format(totalMi);
+        if (distanceEl) distanceEl.textContent = formatter.format(totalKm);
       } else {
         errors.push(leaderboardData.error ?? "Could not load company stats.");
       }
@@ -285,13 +305,12 @@ const upcomingEvent = events[0] ?? null;
         const stats = statsData.stats ?? {};
         const distanceKm = stats.drivenDistanceKm ?? 0;
         const jobs = stats.jobs ?? 0;
-        const distanceMi = Math.round(distanceKm * 0.621371);
 
         const statJobs = document.getElementById("stat-jobs");
         const statDistance = document.getElementById("stat-distance");
         const statRevenue = document.getElementById("stat-revenue");
         if (statJobs) statJobs.textContent = fullFormatter.format(jobs);
-        if (statDistance) statDistance.textContent = fullFormatter.format(distanceMi);
+        if (statDistance) statDistance.textContent = fullFormatter.format(distanceKm);
         if (statRevenue) statRevenue.textContent = `€${fullFormatter.format(stats.revenue ?? 0)}`;
 
         if (statsData.rank) renderRankProgress(statsData.rank);
@@ -314,7 +333,7 @@ const upcomingEvent = events[0] ?? null;
               <li class="flex items-start justify-between gap-3 text-sm">
                 <div>
                   <p class="font-medium text-white">Job delivered</p>
-                  <p class="text-slate-400">${job.driver} · ${fullFormatter.format(Math.round(job.distance * 0.621371))} mi</p>
+                  <p class="text-slate-400">${job.driver} · ${fullFormatter.format(job.distance)} km</p>
                 </div>
                 <span class="shrink-0 text-slate-500">${job.date ? new Date(job.date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span>
               </li>`

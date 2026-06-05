@@ -40,7 +40,7 @@ import HubLayout from "../../../layouts/HubLayout.astro";
           <th>Date</th>
           <th>Source</th>
           <th>Destination</th>
-          <th>Distance</th>
+          <th>Distance (km)</th>
           <th>Damage</th>
           <th>Income</th>
           <th>Status</th>
@@ -78,7 +78,7 @@ import HubLayout from "../../../layouts/HubLayout.astro";
           <td class="text-slate-400">${job.date ? new Date(String(job.date)).toLocaleString() : "—"}</td>
           <td class="text-cyan-300">${job.from}</td>
           <td class="text-cyan-300">${job.to}</td>
-          <td>${formatter.format(Math.round(Number(job.distance) * 0.621371))} mi</td>
+          <td>${formatter.format(Number(job.distance))} km</td>
           <td>${job.damage}%</td>
           <td>€${formatter.format(Number(job.income))}</td>
           <td class="capitalize">${String(job.status).replace("_", " ")}</td>
