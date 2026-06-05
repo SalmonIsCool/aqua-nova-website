@@ -62,7 +62,7 @@ const upcomingEvent = events[0] ?? null;
 
     <section class="mt-6">
       <div class="hub-stats-toolbar">
-        <h2 class="hub-stats-heading">Personal stats</h2>
+        <h2 class="hub-stats-heading">Personal stats <span class="text-xs font-normal normal-case text-slate-500">· In VTC</span></h2>
         <div class="hub-period-toggle" role="group" aria-label="Personal stats period">
           <button type="button" class="hub-period-toggle__btn hub-period-toggle__btn--active" data-target="personal" data-period="all-time">
             All time
@@ -185,6 +185,7 @@ const upcomingEvent = events[0] ?? null;
 </HubLayout>
 
 <script>
+  import { driverRanks } from "../../data/driver-ranks";
   import { getAuthHeadersAsync, onIdentityReady } from "../../scripts/hub-auth";
   import { liveFetch, startLiveRefresh } from "../../scripts/live-fetch";
 
@@ -208,6 +209,47 @@ const upcomingEvent = events[0] ?? null;
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
+  }
+
+  function computeRankProgress(totalKm: number) {
+    const total = Math.max(0, Math.round(totalKm));
+    let currentIndex = 0;
+
+    for (let index = driverRanks.length - 1; index >= 0; index -= 1) {
+      if (total >= driverRanks[index].minKm) {
+        currentIndex = index;
+        break;
+      }
+    }
+
+    const current = driverRanks[currentIndex];
+    const next = driverRanks[currentIndex + 1] ?? null;
+
+    if (!next) {
+      return {
+        currentName: current.name,
+        currentColor: current.color,
+        nextName: null,
+        nextColor: null,
+        totalDistanceKm: total,
+        progressPercent: 100,
+        remainingKm: 0
+      };
+    }
+
+    const span = next.minKm - current.minKm;
+    const gained = total - current.minKm;
+    const progressPercent = span > 0 ? Math.min(Math.floor((gained / span) * 100), 100) : 0;
+
+    return {
+      currentName: current.name,
+      currentColor: current.color,
+      nextName: next.name,
+      nextColor: next.color,
+      totalDistanceKm: total,
+      progressPercent,
+      remainingKm: Math.max(next.minKm - total, 0)
+    };
   }
 
   function applyRankPill(element: HTMLElement | null, name: string, color: string) {
@@ -371,7 +413,8 @@ const upcomingEvent = events[0] ?? null;
         if (statDistance) statDistance.textContent = fullFormatter.format(distanceKm);
         if (statRevenue) statRevenue.textContent = `€${fullFormatter.format(stats.revenue ?? 0)}`;
 
-        if (statsData.rank) renderRankProgress(statsData.rank);
+        const rankKm = Number(statsData.rankKm ?? statsData.totalDistanceKm ?? 0);
+        renderRankProgress(statsData.rank ?? computeRankProgress(rankKm));
       } else {
         errors.push(statsData.error ?? "Could not load your stats.");
         if (greetingEl) greetingEl.textContent = `${greeting()}, driver`;

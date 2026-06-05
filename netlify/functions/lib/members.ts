@@ -27,9 +27,21 @@ function unwrapRecord(body: unknown) {
 
 function readTotalKm(record: Record<string, unknown> | null | undefined) {
   if (!record) return null;
-  const value = Number(record.total_driven_distance);
-  if (Number.isFinite(value) && value >= 0) return Math.round(value);
+
+  for (const key of ["total_driven_distance", "total_driven_distance_km", "total_distance_km"]) {
+    const value = Number(record[key]);
+    if (Number.isFinite(value) && value >= 0) return Math.round(value);
+  }
+
   return null;
+}
+
+function mergeRecords(
+  primary: Record<string, unknown> | null | undefined,
+  secondary: Record<string, unknown> | null | undefined
+) {
+  if (!primary && !secondary) return null;
+  return { ...(secondary ?? {}), ...(primary ?? {}) };
 }
 
 function readAvatarUrl(record: Record<string, unknown> | null | undefined) {
@@ -50,18 +62,22 @@ function readRoundedNumber(record: Record<string, unknown> | null | undefined, k
   return Number.isFinite(value) && value >= 0 ? Math.round(value) : 0;
 }
 
-async function fetchDriverJobCount(companyId: string, truckyUserId: number) {
-  const response = await truckyFetch(
-    `/api/v1/company/${companyId}/jobs`,
-    new URLSearchParams({ page: "1", user_id: String(truckyUserId) })
-  );
-  if (!response.ok) return 0;
+async function fetchDriverVtcJobCount(companyId: string, truckyUserId: number) {
+  const queries = [
+    new URLSearchParams({ page: "1", user_id: String(truckyUserId) }),
+    new URLSearchParams({ page: "1", user_id: String(truckyUserId), status: "completed" })
+  ];
 
-  const body = await response.json();
-  const total = Number(body?.total);
-  if (Number.isFinite(total) && total >= 0) return total;
+  for (const query of queries) {
+    const response = await truckyFetch(`/api/v1/company/${companyId}/jobs`, query);
+    if (!response.ok) continue;
 
-  return Array.isArray(body?.data) ? body.data.length : 0;
+    const body = await response.json();
+    const total = Number(body?.total);
+    if (Number.isFinite(total) && total >= 0) return total;
+  }
+
+  return 0;
 }
 
 export function memberMatches(record: Record<string, unknown>, truckyUserId: number) {
@@ -128,28 +144,9 @@ export async function fetchMemberAvatarMap(companyId: string) {
   return map;
 }
 
-function buildProfileFromRecord(
-  record: Record<string, unknown> | null | undefined,
-  totalJobs: number
-): TruckyMemberProfile | null {
-  const totalDistanceKm = readTotalKm(record);
-  if (totalDistanceKm === null && !record) return null;
+const VTC_STATS_START_YEAR = 2025;
 
-  return {
-    totalDistanceKm: totalDistanceKm ?? 0,
-    totalJobs,
-    totalRevenue: readRoundedNumber(record, "total_revenue"),
-    totalCargoMass: readRoundedNumber(record, "total_cargo_mass"),
-    avatarUrl: readAvatarUrl(record),
-    truckyName: readName(record)
-  };
-}
-
-export async function fetchDriverTruckyProfile(
-  companyId: string,
-  truckyUserId: number
-): Promise<TruckyMemberProfile> {
-  const totalJobs = await fetchDriverJobCount(companyId, truckyUserId);
+async function fetchUserRecord(truckyUserId: number) {
   const userPaths = [`/api/v2/user/${truckyUserId}`, `/api/v1/user/${truckyUserId}`];
 
   for (const path of userPaths) {
@@ -157,23 +154,144 @@ export async function fetchDriverTruckyProfile(
     if (!response.ok) continue;
 
     const body = await response.json();
-    const profile = buildProfileFromRecord(unwrapRecord(body), totalJobs);
-    if (profile) return profile;
+    const record = unwrapRecord(body);
+    if (record) return record;
   }
 
-  const members = await fetchAllCompanyMembers(companyId);
-  const match = members.find((member) => memberMatches(member, truckyUserId));
+  return null;
+}
 
-  return (
-    buildProfileFromRecord(match, totalJobs) ?? {
-      totalDistanceKm: 0,
-      totalJobs,
-      totalRevenue: 0,
-      totalCargoMass: 0,
-      avatarUrl: null,
-      truckyName: null
+export async function fetchDriverHubProfile(companyId: string, truckyUserId: number) {
+  const [members, userRecord] = await Promise.all([
+    fetchAllCompanyMembers(companyId),
+    fetchUserRecord(truckyUserId)
+  ]);
+
+  const memberRecord = members.find((member) => memberMatches(member, truckyUserId)) ?? null;
+  const displayRecord = mergeRecords(memberRecord, userRecord);
+
+  return {
+    avatarUrl: readAvatarUrl(displayRecord),
+    truckyName: readName(displayRecord)
+  };
+}
+
+function findMemberPeriodStats(
+  members: Array<{
+    user_id: number;
+    driven_distance?: number;
+    jobs?: number;
+    cargo_mass?: number;
+    revenue?: number;
+  }>,
+  truckyUserId: number
+): DriverPeriodStats {
+  const mine = members.find((member) => Number(member.user_id) === truckyUserId);
+  if (!mine) {
+    return { drivenDistanceKm: 0, jobs: 0, cargoMass: 0, revenue: 0 };
+  }
+
+  return {
+    drivenDistanceKm: Math.round(mine.driven_distance ?? 0),
+    jobs: mine.jobs ?? 0,
+    cargoMass: Math.round(mine.cargo_mass ?? 0),
+    revenue: Math.round(mine.revenue ?? 0)
+  };
+}
+
+async function fetchDriverVtcLifetimeKmFromMonthlySum(companyId: string, truckyUserId: number) {
+  const now = new Date();
+  const tasks: Promise<DriverPeriodStats>[] = [];
+
+  for (let year = VTC_STATS_START_YEAR; year <= now.getFullYear(); year += 1) {
+    const endMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+    for (let month = 1; month <= endMonth; month += 1) {
+      tasks.push(fetchDriverMonthlyStats(companyId, truckyUserId, month, year));
     }
-  );
+  }
+
+  const results = await Promise.all(tasks);
+  return results.reduce((sum, stats) => sum + stats.drivenDistanceKm, 0);
+}
+
+/** VTC all-time km for rank progress — matched against the driver rank ladder. */
+export async function fetchDriverVtcLifetimeKm(companyId: string, truckyUserId: number) {
+  const members = await fetchAllCompanyMembers(companyId);
+  const member = members.find((record) => memberMatches(record, truckyUserId));
+  const fromMember = readTotalKm(member);
+  if (fromMember !== null && fromMember > 0) return fromMember;
+
+  const yearly = await fetchDriverVtcYearlyTotals(companyId, truckyUserId);
+  if (yearly.drivenDistanceKm > 0) return yearly.drivenDistanceKm;
+
+  return fetchDriverVtcLifetimeKmFromMonthlySum(companyId, truckyUserId);
+}
+
+async function fetchDriverVtcYearlyTotals(companyId: string, truckyUserId: number) {
+  const now = new Date();
+  let drivenDistanceKm = 0;
+  let jobs = 0;
+  let cargoMass = 0;
+  let revenue = 0;
+
+  for (let year = now.getFullYear(); year >= VTC_STATS_START_YEAR; year -= 1) {
+    const query = new URLSearchParams({
+      period: "yearly",
+      year: String(year)
+    });
+    const response = await truckyFetch(`/api/v2/company/${companyId}/stats/members`, query);
+    if (!response.ok) continue;
+
+    const data = await response.json();
+    const members = Array.isArray(data.members) ? data.members : [];
+    const mine = findMemberPeriodStats(members, truckyUserId);
+
+    drivenDistanceKm += mine.drivenDistanceKm;
+    jobs += mine.jobs;
+    cargoMass += mine.cargoMass;
+    revenue += mine.revenue;
+  }
+
+  return { drivenDistanceKm, jobs, cargoMass, revenue };
+}
+
+/** All-time stats logged for this driver within the VTC (not global Trucky totals). */
+export async function fetchDriverVtcAllTimeStats(
+  companyId: string,
+  truckyUserId: number
+): Promise<DriverPeriodStats> {
+  const [jobCount, yearlyTotals, lifetimeKm] = await Promise.all([
+    fetchDriverVtcJobCount(companyId, truckyUserId),
+    fetchDriverVtcYearlyTotals(companyId, truckyUserId),
+    fetchDriverVtcLifetimeKm(companyId, truckyUserId)
+  ]);
+
+  return {
+    drivenDistanceKm: lifetimeKm,
+    jobs: jobCount > 0 ? jobCount : yearlyTotals.jobs,
+    cargoMass: yearlyTotals.cargoMass,
+    revenue: yearlyTotals.revenue
+  };
+}
+
+/** @deprecated Use fetchDriverHubProfile + fetchDriverVtcAllTimeStats */
+export async function fetchDriverTruckyProfile(
+  companyId: string,
+  truckyUserId: number
+): Promise<TruckyMemberProfile> {
+  const [hubProfile, vtcStats] = await Promise.all([
+    fetchDriverHubProfile(companyId, truckyUserId),
+    fetchDriverVtcAllTimeStats(companyId, truckyUserId)
+  ]);
+
+  return {
+    totalDistanceKm: vtcStats.drivenDistanceKm,
+    totalJobs: vtcStats.jobs,
+    totalRevenue: vtcStats.revenue,
+    totalCargoMass: vtcStats.cargoMass,
+    avatarUrl: hubProfile.avatarUrl,
+    truckyName: hubProfile.truckyName
+  };
 }
 
 export async function fetchCompanyAllTimeStats(companyId: string): Promise<CompanyAllTimeTotals> {
@@ -186,6 +304,14 @@ export async function fetchCompanyAllTimeStats(companyId: string): Promise<Compa
   let driverCount = members.length;
   let totalJobs = 0;
   let totalRevenue = 0;
+  let totalDistanceKm = 0;
+
+  if (aggregatedResponse.ok) {
+    const aggregated = await aggregatedResponse.json();
+    totalDistanceKm = Math.round(Number(aggregated?.distance_driven_on_job) || 0);
+    totalJobs = Number(aggregated?.jobs_delivered) || 0;
+    totalRevenue = Math.round(Number(aggregated?.total_earned_money) || 0);
+  }
 
   if (allTimeResponse.ok) {
     const data = await allTimeResponse.json();
@@ -194,27 +320,22 @@ export async function fetchCompanyAllTimeStats(companyId: string): Promise<Compa
     const revenue = Number(data?.revenues);
 
     if (Number.isFinite(membersCount) && membersCount > 0) driverCount = membersCount;
-    if (Number.isFinite(jobsCount) && jobsCount >= 0) totalJobs = jobsCount;
-    if (Number.isFinite(revenue) && revenue >= 0) totalRevenue = Math.round(revenue);
+    if (totalJobs === 0 && Number.isFinite(jobsCount) && jobsCount >= 0) totalJobs = jobsCount;
+    if (totalRevenue === 0 && Number.isFinite(revenue) && revenue >= 0) {
+      totalRevenue = Math.round(revenue);
+    }
   }
 
-  let totalDistanceKm = members.reduce((sum, member) => sum + (readTotalKm(member) ?? 0), 0);
+  const memberDistanceKm = members.reduce((sum, member) => sum + (readTotalKm(member) ?? 0), 0);
+  if (totalDistanceKm === 0 && memberDistanceKm > 0) totalDistanceKm = memberDistanceKm;
 
-  if (aggregatedResponse.ok) {
-    const aggregated = await aggregatedResponse.json();
-    const aggregatedDistance = Number(aggregated?.distance_driven_on_job);
-    const aggregatedJobs = Number(aggregated?.jobs_delivered);
-    const aggregatedRevenue = Number(aggregated?.total_earned_money);
-
-    if (totalDistanceKm === 0 && Number.isFinite(aggregatedDistance) && aggregatedDistance > 0) {
-      totalDistanceKm = Math.round(aggregatedDistance);
+  if (totalJobs === 0 || totalDistanceKm === 0 || totalRevenue === 0) {
+    const yearlyTotals = await fetchCompanyYearlyTotals(companyId);
+    if (totalJobs === 0 && yearlyTotals.totalJobs > 0) totalJobs = yearlyTotals.totalJobs;
+    if (totalDistanceKm === 0 && yearlyTotals.totalDistanceKm > 0) {
+      totalDistanceKm = yearlyTotals.totalDistanceKm;
     }
-    if (totalJobs === 0 && Number.isFinite(aggregatedJobs) && aggregatedJobs > 0) {
-      totalJobs = aggregatedJobs;
-    }
-    if (totalRevenue === 0 && Number.isFinite(aggregatedRevenue) && aggregatedRevenue > 0) {
-      totalRevenue = Math.round(aggregatedRevenue);
-    }
+    if (totalRevenue === 0 && yearlyTotals.totalRevenue > 0) totalRevenue = yearlyTotals.totalRevenue;
   }
 
   return {
@@ -223,6 +344,35 @@ export async function fetchCompanyAllTimeStats(companyId: string): Promise<Compa
     totalDistanceKm,
     totalRevenue
   };
+}
+
+async function fetchCompanyYearlyTotals(companyId: string) {
+  const now = new Date();
+  const years = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2];
+  let totalJobs = 0;
+  let totalDistanceKm = 0;
+  let totalRevenue = 0;
+
+  for (const year of years) {
+    const query = new URLSearchParams({ period: "yearly", year: String(year) });
+    const response = await truckyFetch(`/api/v2/company/${companyId}/stats/members`, query);
+    if (!response.ok) continue;
+
+    const data = await response.json();
+    const members = Array.isArray(data.members) ? data.members : [];
+    totalJobs += members.reduce((sum: number, member: { jobs?: number }) => sum + (member.jobs ?? 0), 0);
+    totalDistanceKm += Math.round(
+      members.reduce(
+        (sum: number, member: { driven_distance?: number }) => sum + (member.driven_distance ?? 0),
+        0
+      )
+    );
+    totalRevenue += Math.round(
+      members.reduce((sum: number, member: { revenue?: number }) => sum + (member.revenue ?? 0), 0)
+    );
+  }
+
+  return { totalJobs, totalDistanceKm, totalRevenue };
 }
 
 export interface DriverPeriodStats {
@@ -276,6 +426,7 @@ export async function fetchCompanyMonthlyStats(
   };
 }
 
+/** Monthly stats logged for this driver within the VTC. */
 export async function fetchDriverMonthlyStats(
   companyId: string,
   truckyUserId: number,
@@ -296,18 +447,5 @@ export async function fetchDriverMonthlyStats(
 
   const data = await response.json();
   const members = Array.isArray(data.members) ? data.members : [];
-  const mine = members.find(
-    (member: { user_id: number }) => Number(member.user_id) === truckyUserId
-  );
-
-  if (!mine) {
-    return { drivenDistanceKm: 0, jobs: 0, cargoMass: 0, revenue: 0 };
-  }
-
-  return {
-    drivenDistanceKm: Math.round(mine.driven_distance ?? 0),
-    jobs: mine.jobs ?? 0,
-    cargoMass: Math.round(mine.cargo_mass ?? 0),
-    revenue: Math.round(mine.revenue ?? 0)
-  };
+  return findMemberPeriodStats(members, truckyUserId);
 }

@@ -1,8 +1,10 @@
 import type { Handler } from "@netlify/functions";
 import { authenticateHubRequest } from "./lib/auth";
 import {
+  fetchDriverHubProfile,
   fetchDriverMonthlyStats,
-  fetchDriverTruckyProfile
+  fetchDriverVtcAllTimeStats,
+  fetchDriverVtcLifetimeKm
 } from "./lib/members";
 import { getRankProgress } from "./lib/ranks";
 
@@ -33,30 +35,38 @@ export const handler: Handler = async (event, context) => {
       return json(500, { error: "Trucky API is not configured on the server." });
     }
 
-    const truckyProfile = await fetchDriverTruckyProfile(companyId, auth.driver.truckyUserId);
-    const totalDistanceKm = truckyProfile.totalDistanceKm;
+    const truckyUserId = auth.driver.truckyUserId;
 
-    const stats =
+    const [hubProfile, vtcAllTime, rankKm, monthlyStats] = await Promise.all([
+      fetchDriverHubProfile(companyId, truckyUserId),
+      fetchDriverVtcAllTimeStats(companyId, truckyUserId),
+      fetchDriverVtcLifetimeKm(companyId, truckyUserId),
       period === "monthly"
-        ? await fetchDriverMonthlyStats(companyId, auth.driver.truckyUserId, month, year)
-        : {
-            drivenDistanceKm: totalDistanceKm,
-            jobs: truckyProfile.totalJobs,
-            cargoMass: truckyProfile.totalCargoMass,
-            revenue: truckyProfile.totalRevenue
-          };
+        ? fetchDriverMonthlyStats(companyId, truckyUserId, month, year)
+        : Promise.resolve(null)
+    ]);
+
+    const stats = period === "monthly" ? monthlyStats! : vtcAllTime;
+    const rank = getRankProgress(rankKm);
 
     return json(200, {
       driver: {
         ...auth.driver,
-        avatarUrl: truckyProfile.avatarUrl
+        avatarUrl: hubProfile.avatarUrl
       },
       period,
+      scope: "vtc",
       month: period === "monthly" ? month : undefined,
       year: period === "monthly" ? year : undefined,
-      totalDistanceKm,
-      stats,
-      rank: getRankProgress(totalDistanceKm)
+      rankKm,
+      totalDistanceKm: rankKm,
+      stats: {
+        drivenDistanceKm: stats.drivenDistanceKm,
+        jobs: stats.jobs,
+        cargoMass: stats.cargoMass,
+        revenue: stats.revenue
+      },
+      rank
     });
   } catch {
     return json(500, { error: "Failed to load your stats." });
