@@ -1,0 +1,33 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import { siteConfig } from "../../../data/site";
+---
+
+<HubLayout
+  title="Getting Started"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Training", href: "/hub/training/getting-started" },
+    { label: "Getting Started" }
+  ]}
+>
+  <article class="hub-panel max-w-3xl">
+    <h1 class="hub-page-title">Welcome to {siteConfig.name} 👋</h1>
+    <p class="mt-4 text-slate-300">
+      This page will walk new drivers through paint jobs, tracker setup, Discord, and your first delivery. Content is
+      coming soon.
+    </p>
+
+    <section class="mt-8 space-y-4 text-slate-300">
+      <h2 class="text-xl font-semibold text-white">What to expect</h2>
+      <ul class="list-disc space-y-2 pl-5">
+        <li>How to represent Aqua Nova on TruckersMP</li>
+        <li>Installing and using Trucky for job tracking</li>
+        <li>Joining convoys and company events</li>
+        <li>Where to get help from staff and other drivers</li>
+      </ul>
+    </section>
+
+    <p class="mt-8 text-sm text-slate-500">Placeholder content — staff will add the full guide here.</p>
+  </article>
+</HubLayout>

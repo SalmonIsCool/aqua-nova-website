@@ -1,0 +1,42 @@
+---
+interface Breadcrumb {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  breadcrumbs: Breadcrumb[];
+}
+
+const { breadcrumbs } = Astro.props;
+---
+
+<header class="hub-topbar">
+  <nav class="hub-topbar__breadcrumbs" aria-label="Breadcrumb">
+    {
+      breadcrumbs.map((crumb, index) => (
+        <>
+          {index > 0 && <span class="text-slate-600">/</span>}
+          {crumb.href ? (
+            <a href={crumb.href} class="hover:text-cyan-300">
+              {crumb.label}
+            </a>
+          ) : (
+            <span class="text-slate-300">{crumb.label}</span>
+          )}
+        </>
+      ))
+    }
+  </nav>
+
+  <div class="hub-topbar__actions">
+    <a href="/hub/events" class="hub-topbar__icon-btn" aria-label="Events" title="Events">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
+        <path d="M15 17h5l-1.4-1.4a2 2 0 0 0-1.4-.6H17v-1a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10" />
+        <circle cx="7.5" cy="17.5" r="2.5" />
+        <circle cx="17.5" cy="17.5" r="2.5" />
+      </svg>
+    </a>
+    <div class="hub-topbar__avatar" id="hub-topbar-avatar">?</div>
+  </div>
+</header>

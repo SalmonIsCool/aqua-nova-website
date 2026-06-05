@@ -1,0 +1,78 @@
+---
+import { siteConfig } from "../../data/site";
+import { hubNav, isHubChildActive, isHubNavActive } from "../../data/hub-nav";
+
+const pathname = Astro.url.pathname.replace(/\/$/, "") || "/hub";
+---
+
+<aside class="hub-sidebar">
+  <a href="/hub/" class="hub-sidebar__brand">
+    <img src="/assets/logo.png" alt="" class="h-10 w-10 rounded-full" width="40" height="40" />
+    <div>
+      <p class="text-sm font-bold uppercase tracking-wide text-cyan-300">{siteConfig.name}</p>
+      <p class="text-xs text-slate-400">Drivers Hub</p>
+    </div>
+  </a>
+
+  <div class="hub-sidebar__profile">
+    <div class="hub-sidebar__avatar" id="hub-sidebar-avatar">?</div>
+    <div class="min-w-0">
+      <p class="truncate text-sm font-semibold text-white" id="hub-sidebar-name">Driver</p>
+      <p class="text-xs text-emerald-300">Licensed Driver</p>
+    </div>
+  </div>
+
+  <p class="hub-sidebar__section-label">Driver area</p>
+
+  <nav class="hub-sidebar__nav" aria-label="Drivers Hub">
+    {
+      hubNav.map((item) => {
+        const active = isHubNavActive(pathname, item);
+
+        if (item.children) {
+          return (
+            <details class="hub-sidebar__group" open={active}>
+              <summary class:list={["hub-sidebar__link", { "hub-sidebar__link--active": active }]}>
+                <span>{item.label}</span>
+                <svg class="hub-sidebar__chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </summary>
+              <div class="hub-sidebar__subnav">
+                {item.children.map((child) => (
+                  <a
+                    href={child.href}
+                    class:list={[
+                      "hub-sidebar__sublink",
+                      { "hub-sidebar__sublink--active": isHubChildActive(pathname, child.href) }
+                    ]}
+                  >
+                    {child.label}
+                  </a>
+                ))}
+              </div>
+            </details>
+          );
+        }
+
+        return (
+          <a
+            href={item.href}
+            class:list={["hub-sidebar__link", { "hub-sidebar__link--active": active }]}
+          >
+            {item.label}
+          </a>
+        );
+      })
+    }
+  </nav>
+
+  <div class="hub-sidebar__footer">
+    <a href="/" class="text-xs text-slate-400 transition hover:text-cyan-300">← Main site</a>
+    <button id="hub-logout" type="button" class="hub-sidebar__logout">Log out</button>
+  </div>
+</aside>

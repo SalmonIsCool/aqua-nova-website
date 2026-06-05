@@ -1,0 +1,76 @@
+---
+interface Field {
+  name: string;
+  label: string;
+  type?: "text" | "email" | "url" | "number" | "textarea" | "select";
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  rows?: number;
+}
+
+interface Props {
+  roleTitle: string;
+  formName: string;
+  applicationType: string;
+  fields: Field[];
+}
+
+const { roleTitle, formName, applicationType, fields } = Astro.props;
+---
+
+<form
+  name={formName}
+  method="POST"
+  data-netlify="true"
+  netlify-honeypot="bot-field"
+  class="hub-panel grid gap-5"
+>
+  <input type="hidden" name="form-name" value={formName} />
+  <input type="hidden" name="application_type" value={applicationType} />
+  <input type="hidden" name="subject" value={`Staff Application: ${roleTitle}`} />
+  <p class="hidden">
+    <label>
+      Do not fill this out if you are human: <input name="bot-field" />
+    </label>
+  </p>
+
+  <p class="rounded-lg border border-cyan-400/20 bg-cyan-950/30 px-4 py-3 text-sm text-slate-300">
+    Submitting as: <strong class="text-white">{applicationType}</strong>
+  </p>
+
+  {
+    fields.map((field) => (
+      <label class="grid gap-2">
+        <span class="text-sm font-medium text-slate-300">{field.label}</span>
+        {field.type === "textarea" ? (
+          <textarea
+            name={field.name}
+            rows={field.rows ?? 5}
+            required={field.required ?? true}
+            class="input-field"
+            placeholder={field.placeholder}
+          />
+        ) : field.type === "select" ? (
+          <select name={field.name} required={field.required ?? true} class="input-field">
+            <option value="">Select…</option>
+            {(field.options ?? []).map((option) => (
+              <option value={option}>{option}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={field.type ?? "text"}
+            name={field.name}
+            required={field.required ?? true}
+            class="input-field"
+            placeholder={field.placeholder}
+            autocomplete={field.name === "email" ? "email" : field.name === "name" ? "name" : undefined}
+          />
+        )}
+      </label>
+    ))
+  }
+
+  <button type="submit" class="btn-primary w-full sm:w-fit">Submit application</button>
+</form>

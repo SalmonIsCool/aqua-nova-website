@@ -1,0 +1,39 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import { siteConfig } from "../../../data/site";
+---
+
+<HubLayout
+  title="VTC Rules"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Training", href: "/hub/training/vtc-rules" },
+    { label: "VTC Rules" }
+  ]}
+>
+  <article class="hub-panel max-w-3xl">
+    <h1 class="hub-page-title bg-gradient-to-r from-cyan-300 to-blue-400 bg-clip-text text-transparent">
+      {siteConfig.name} VTC Rules
+    </h1>
+    <p class="mt-4 text-slate-300">
+      Our official rules and expectations for every driver. Full rules will be published here soon.
+    </p>
+
+    <ol class="mt-8 list-decimal space-y-6 pl-5 text-slate-300">
+      <li>
+        <strong class="text-white">Represent the company professionally</strong>
+        <p class="mt-2">Use the Aqua Nova player tag and paint when driving for the VTC.</p>
+      </li>
+      <li>
+        <strong class="text-white">Follow TruckersMP rules</strong>
+        <p class="mt-2">No reckless driving, insults, or griefing — on or off convoy.</p>
+      </li>
+      <li>
+        <strong class="text-white">Track your jobs</strong>
+        <p class="mt-2">Keep Trucky running so your deliveries count toward company stats.</p>
+      </li>
+    </ol>
+
+    <p class="mt-8 text-sm text-slate-500">Placeholder content — staff will add the complete rulebook here.</p>
+  </article>
+</HubLayout>

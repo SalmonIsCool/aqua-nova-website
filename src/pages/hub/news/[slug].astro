@@ -1,0 +1,32 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import { getCollection, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("news");
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<HubLayout
+  title={post.data.title}
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "News", href: "/hub/news" },
+    { label: post.data.title }
+  ]}
+>
+  <article>
+    <p class="text-sm text-slate-400">{post.data.date.toLocaleDateString()}</p>
+    <h1 class="hub-page-title mt-2">{post.data.title}</h1>
+    {post.data.coverImage && (
+      <img src={post.data.coverImage} alt="" class="mt-6 w-full rounded-xl object-cover" />
+    )}
+    <div class="prose prose-invert mt-6 max-w-none text-slate-300">
+      <Content />
+    </div>
+  </article>
+</HubLayout>

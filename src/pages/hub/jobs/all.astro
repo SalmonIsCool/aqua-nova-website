@@ -1,0 +1,137 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+---
+
+<HubLayout
+  title="All jobs"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Jobs", href: "/hub/jobs/all" },
+    { label: "View jobs" }
+  ]}
+>
+  <h1 class="hub-page-title">All jobs</h1>
+  <p class="mt-2 text-slate-400">Recent deliveries across Aqua Nova Transport.</p>
+
+  <div class="mt-6 flex flex-wrap items-end gap-3">
+    <label class="grid gap-1 text-sm text-slate-300">
+      Search by
+      <select id="search-field" class="input-field w-auto min-w-[10rem]">
+        <option value="driver">Driver</option>
+        <option value="from">Source</option>
+        <option value="to">Destination</option>
+      </select>
+    </label>
+    <label class="grid flex-1 gap-1 text-sm text-slate-300 sm:min-w-[14rem]">
+      Query
+      <input id="search-query" type="search" class="input-field" placeholder="Search jobs…" />
+    </label>
+    <button id="jobs-refresh" type="button" class="btn-primary">Search</button>
+  </div>
+
+  <p id="jobs-status" class="mt-4 text-sm text-slate-400">Loading jobs…</p>
+
+  <div class="hub-table-wrap mt-4">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Driver</th>
+          <th>Date</th>
+          <th>Source</th>
+          <th>Destination</th>
+          <th>Distance</th>
+          <th>Damage</th>
+          <th>Income</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-body"></tbody>
+    </table>
+  </div>
+</HubLayout>
+
+<script>
+  import { getAuthHeaders, onIdentityReady } from "../../../scripts/hub-auth";
+
+  const formatter = new Intl.NumberFormat("en-GB");
+  let allJobs: Array<Record<string, unknown>> = [];
+
+  function renderJobs(jobs: Array<Record<string, unknown>>) {
+    const bodyEl = document.getElementById("jobs-body");
+    const statusEl = document.getElementById("jobs-status");
+    if (!bodyEl) return;
+
+    if (!jobs.length) {
+      bodyEl.innerHTML = "";
+      if (statusEl) statusEl.textContent = "No jobs match your search.";
+      return;
+    }
+
+    if (statusEl) statusEl.textContent = `Showing ${jobs.length} job(s).`;
+    bodyEl.innerHTML = jobs
+      .map(
+        (job) => `
+        <tr class="cursor-pointer" data-job-id="${job.id}">
+          <td class="text-slate-400">${job.id}</td>
+          <td>${job.driver}</td>
+          <td class="text-slate-400">${job.date ? new Date(String(job.date)).toLocaleString() : "—"}</td>
+          <td class="text-cyan-300">${job.from}</td>
+          <td class="text-cyan-300">${job.to}</td>
+          <td>${formatter.format(Math.round(Number(job.distance) * 0.621371))} mi</td>
+          <td>${job.damage}%</td>
+          <td>€${formatter.format(Number(job.income))}</td>
+          <td class="capitalize">${String(job.status).replace("_", " ")}</td>
+        </tr>`
+      )
+      .join("");
+
+    bodyEl.querySelectorAll("[data-job-id]").forEach((row) => {
+      row.addEventListener("click", () => {
+        const id = row.getAttribute("data-job-id");
+        if (id) window.location.href = `/hub/job?id=${id}`;
+      });
+    });
+  }
+
+  function filterJobs() {
+    const field = (document.getElementById("search-field") as HTMLSelectElement).value;
+    const query = (document.getElementById("search-query") as HTMLInputElement).value.trim().toLowerCase();
+    if (!query) {
+      renderJobs(allJobs);
+      return;
+    }
+    renderJobs(
+      allJobs.filter((job) => String(job[field] ?? "").toLowerCase().includes(query))
+    );
+  }
+
+  async function loadJobs() {
+    const statusEl = document.getElementById("jobs-status");
+    if (statusEl) statusEl.textContent = "Loading jobs…";
+
+    try {
+      const response = await fetch("/api/company-jobs?page=1", { headers: getAuthHeaders() });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (statusEl) statusEl.textContent = data.error ?? "Could not load jobs.";
+        return;
+      }
+
+      allJobs = Array.isArray(data.jobs) ? data.jobs : [];
+      renderJobs(allJobs);
+    } catch {
+      if (statusEl) statusEl.textContent = "Could not reach the hub API.";
+    }
+  }
+
+  document.getElementById("jobs-refresh")?.addEventListener("click", filterJobs);
+  document.getElementById("search-query")?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") filterJobs();
+  });
+
+  onIdentityReady((user) => {
+    if (user) loadJobs();
+  });
+</script>

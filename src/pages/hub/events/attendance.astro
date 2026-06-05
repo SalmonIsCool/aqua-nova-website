@@ -1,0 +1,71 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import { getCollection } from "astro:content";
+
+const events = await getCollection("events");
+
+const now = new Date();
+const year = now.getFullYear();
+const month = now.getMonth();
+
+const monthStart = new Date(year, month, 1);
+const monthEnd = new Date(year, month + 1, 0);
+const startDay = (monthStart.getDay() + 6) % 7;
+const daysInMonth = monthEnd.getDate();
+
+const monthEvents = events.filter((event) => {
+  const d = event.data.date;
+  return d.getFullYear() === year && d.getMonth() === month;
+});
+
+function eventsOnDay(day: number) {
+  return monthEvents.filter((event) => event.data.date.getDate() === day);
+}
+
+const monthLabel = monthStart.toLocaleString(undefined, { month: "long", year: "numeric" });
+const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+---
+
+<HubLayout
+  title="Attendance"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Events", href: "/hub/events" },
+    { label: "Attendance" }
+  ]}
+>
+  <h1 class="hub-page-title">Events attended calendar</h1>
+  <p class="mt-2 text-center text-lg text-slate-300">{monthLabel}</p>
+
+  <div class="hub-panel mt-6">
+    <div class="hub-calendar">
+      {weekdays.map((day) => <div class="hub-calendar__head">{day}</div>)}
+
+      {
+        Array.from({ length: startDay }).map(() => (
+          <div class="hub-calendar__day hub-calendar__day--muted" />
+        ))
+      }
+
+      {
+        Array.from({ length: daysInMonth }).map((_, index) => {
+          const day = index + 1;
+          const dayEvents = eventsOnDay(day);
+          return (
+            <div class="hub-calendar__day">
+              <span class="font-semibold text-slate-300">{day}</span>
+              {dayEvents.map((event) => (
+                <a href={`/hub/events/${event.id}`} class="hub-calendar__event block hover:bg-cyan-500/25">
+                  {event.data.title}
+                </a>
+              ))}
+            </div>
+          );
+        })
+      }
+    </div>
+    <p class="mt-6 text-center text-sm text-slate-500">
+      Personal attendance tracking will be added later. Calendar shows company events from the website.
+    </p>
+  </div>
+</HubLayout>

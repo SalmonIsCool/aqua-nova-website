@@ -1,0 +1,63 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import StaffApplicationForm from "../../../components/hub/StaffApplicationForm.astro";
+import { staffRoles } from "../../../data/staff-roles";
+
+const role = staffRoles.find((item) => item.slug === "media")!;
+---
+
+<HubLayout
+  title="Media Team"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Apply for staff", href: "/hub/staff" },
+    { label: "Media Team" }
+  ]}
+>
+  <h1 class="hub-page-title">Media Team application</h1>
+  <p class="mt-2 max-w-2xl text-slate-400">{role.description}</p>
+
+  <div class="mt-6 max-w-2xl">
+    <StaffApplicationForm
+      roleTitle={role.title}
+      formName={role.formName}
+      applicationType={role.applicationType}
+      fields={[
+        { name: "name", label: "Full name" },
+        { name: "email", label: "Email address", type: "email" },
+        { name: "discord_username", label: "Discord username" },
+        {
+          name: "truckersmp_profile",
+          label: "TruckersMP profile link",
+          type: "url",
+          placeholder: "https://truckersmp.com/user/..."
+        },
+        {
+          name: "portfolio_link",
+          label: "Portfolio or examples of your work (link)",
+          type: "url",
+          placeholder: "https://..."
+        },
+        {
+          name: "tools_used",
+          label: "What design or editing tools do you use?",
+          type: "textarea",
+          rows: 3,
+          placeholder: "e.g. Photoshop, Illustrator, Premiere Pro"
+        },
+        {
+          name: "media_experience",
+          label: "Describe your experience creating graphics, banners, or video content.",
+          type: "textarea",
+          rows: 5
+        },
+        {
+          name: "why_media",
+          label: "Why do you want to join the Media Team?",
+          type: "textarea",
+          rows: 4
+        }
+      ]}
+    />
+  </div>
+</HubLayout>

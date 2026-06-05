@@ -2,9 +2,16 @@
 import HubLayout from "../../layouts/HubLayout.astro";
 ---
 
-<HubLayout title="Job details">
+<HubLayout
+  title="Job details"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Jobs", href: "/hub/jobs/mine" },
+    { label: "Job details" }
+  ]}
+>
   <div>
-    <a href="/hub/jobs" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to my jobs</a>
+    <a href="/hub/jobs/mine" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to your jobs</a>
     <div id="job-root" class="mt-6">
       <p class="text-slate-400">Loading job…</p>
     </div>

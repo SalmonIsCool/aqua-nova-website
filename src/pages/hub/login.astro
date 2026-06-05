@@ -4,13 +4,18 @@ import { siteConfig } from "../../data/site";
 ---
 
 <HubLayout title="Login" requireAuth={false}>
-  <div class="mx-auto max-w-lg">
-    <h1 class="section-title">Drivers Hub</h1>
+  <div class="w-full">
+    <a href="/" class="mb-8 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-300">
+      <img src="/assets/logo.png" alt="" class="h-8 w-8 rounded-full" width="32" height="32" />
+      {siteConfig.name}
+    </a>
+
+    <h1 class="hub-page-title">Drivers Hub</h1>
     <p class="mt-4 text-base text-slate-300 sm:text-lg">
       Sign in with the email and password you set after staff approved your application.
     </p>
 
-    <article class="panel mt-8 space-y-4">
+    <article class="hub-panel mt-8 space-y-4">
       <p class="text-sm leading-relaxed text-slate-300">
         <strong class="text-white">Invite-only access.</strong> We do not use Discord or Steam login. You only need the
         account created for you after you are accepted into {siteConfig.name}.

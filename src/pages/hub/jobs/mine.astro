@@ -1,0 +1,106 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+---
+
+<HubLayout
+  title="Your jobs"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Jobs", href: "/hub/jobs/mine" },
+    { label: "View your jobs" }
+  ]}
+>
+  <h1 class="hub-page-title">Your jobs</h1>
+  <p class="mt-2 text-slate-400">Your delivery history from Trucky VTC Hub. Click a row for full details.</p>
+
+  <div class="mt-6 flex flex-wrap gap-3">
+    <label class="grid gap-1 text-sm text-slate-300">
+      Status
+      <select id="job-status" class="input-field w-auto min-w-[10rem]">
+        <option value="">All</option>
+        <option value="completed">Completed</option>
+        <option value="in_progress">In progress</option>
+        <option value="canceled">Canceled</option>
+      </select>
+    </label>
+    <button id="job-refresh" type="button" class="btn-secondary self-end">Refresh</button>
+  </div>
+
+  <p id="jobs-status" class="mt-4 text-sm text-slate-400">Loading jobs…</p>
+
+  <div class="hub-table-wrap mt-4">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>Route</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-body"></tbody>
+    </table>
+  </div>
+</HubLayout>
+
+<script>
+  import { getAuthHeaders, onIdentityReady } from "../../../scripts/hub-auth";
+
+  async function loadJobs() {
+    const statusEl = document.getElementById("jobs-status");
+    const bodyEl = document.getElementById("jobs-body");
+    const statusFilter = (document.getElementById("job-status") as HTMLSelectElement).value;
+
+    if (!bodyEl) return;
+    if (statusEl) statusEl.textContent = "Loading jobs…";
+    bodyEl.innerHTML = "";
+
+    const query = new URLSearchParams({ page: "1" });
+    if (statusFilter) query.set("status", statusFilter);
+
+    try {
+      const response = await fetch(`/api/my-jobs?${query.toString()}`, { headers: getAuthHeaders() });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (statusEl) statusEl.textContent = data.error ?? "Could not load jobs.";
+        return;
+      }
+
+      const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+
+      if (!jobs.length) {
+        if (statusEl) statusEl.textContent = "No jobs found for this filter.";
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = `Showing ${jobs.length} job(s).`;
+
+      bodyEl.innerHTML = jobs
+        .map(
+          (job: { id: number; from: string; to: string; status: string; date: string | null }) => `
+          <tr class="cursor-pointer" data-job-id="${job.id}">
+            <td class="text-cyan-300">${job.from} → ${job.to}</td>
+            <td class="capitalize">${job.status.replace("_", " ")}</td>
+            <td class="text-slate-400">${job.date ? new Date(job.date).toLocaleString() : "—"}</td>
+          </tr>`
+        )
+        .join("");
+
+      bodyEl.querySelectorAll("[data-job-id]").forEach((row) => {
+        row.addEventListener("click", () => {
+          const id = row.getAttribute("data-job-id");
+          if (id) window.location.href = `/hub/job?id=${id}`;
+        });
+      });
+    } catch {
+      if (statusEl) statusEl.textContent = "Could not reach the hub API.";
+    }
+  }
+
+  document.getElementById("job-refresh")?.addEventListener("click", loadJobs);
+  document.getElementById("job-status")?.addEventListener("change", loadJobs);
+
+  onIdentityReady((user) => {
+    if (user) loadJobs();
+  });
+</script>

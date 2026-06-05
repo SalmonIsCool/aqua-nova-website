@@ -1,0 +1,30 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import { staffRoles } from "../../../data/staff-roles";
+---
+
+<HubLayout title="Apply for staff" breadcrumbs={[{ label: "Home", href: "/hub/" }, { label: "Apply for staff" }]}>
+  <h1 class="hub-page-title">Apply for staff</h1>
+  <p class="mt-2 text-slate-400">Join a staff team and help run Aqua Nova Transport.</p>
+
+  <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-2">
+    {
+      staffRoles.map((role) => (
+        <article class="hub-staff-card">
+          <h2 class="text-lg font-semibold text-white">{role.title}</h2>
+          <div class="hub-staff-card__divider" />
+          <p class="flex-1 text-sm leading-relaxed text-slate-300">{role.description}</p>
+          <div class="mt-6 flex justify-end">
+            {role.open ? (
+              <a href={`/hub/staff/${role.slug}`} class="hub-badge-open">
+                Apply
+              </a>
+            ) : (
+              <span class="hub-badge-closed">Closed</span>
+            )}
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</HubLayout>

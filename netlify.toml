@@ -36,3 +36,8 @@
   from = "/api/my-job"
   to = "/.netlify/functions/my-job"
   status = 200
+
+[[redirects]]
+  from = "/api/company-jobs"
+  to = "/.netlify/functions/company-jobs"
+  status = 200

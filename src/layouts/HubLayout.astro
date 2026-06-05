@@ -1,13 +1,23 @@
 ---
 import "../styles/global.css";
 import { siteConfig } from "../data/site";
+import HubSidebar from "../components/hub/HubSidebar.astro";
+import HubTopBar from "../components/hub/HubTopBar.astro";
+
+interface Breadcrumb {
+  label: string;
+  href?: string;
+}
 
 interface Props {
   title: string;
+  breadcrumbs?: Breadcrumb[];
   requireAuth?: boolean;
+  fullWidth?: boolean;
 }
 
-const { title, requireAuth = true } = Astro.props;
+const { title, requireAuth = true, fullWidth = false } = Astro.props;
+const breadcrumbs = Astro.props.breadcrumbs ?? [{ label: "Home", href: "/hub/" }, { label: title }];
 ---
 
 <!doctype html>
@@ -22,36 +32,65 @@ const { title, requireAuth = true } = Astro.props;
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
     <title>{title} | {siteConfig.name} Hub</title>
   </head>
-  <body class="min-h-screen text-white antialiased" data-require-auth={requireAuth ? "true" : "false"}>
-    <header class="border-b border-white/10 bg-[#061a52]/90 backdrop-blur-md">
-      <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <a href="/hub" class="flex items-center gap-3">
-          <img src="/assets/logo.png" alt="" class="h-10 w-10 rounded-full" width="40" height="40" />
-          <span class="font-semibold text-cyan-300">Drivers Hub</span>
-        </a>
-        <nav class="flex items-center gap-2 text-sm sm:gap-4">
-          <a href="/hub" class="rounded-lg px-2 py-1.5 text-slate-200 transition hover:bg-white/10 hover:text-cyan-300 sm:px-3">Dashboard</a>
-          <a href="/hub/jobs" class="rounded-lg px-2 py-1.5 text-slate-200 transition hover:bg-white/10 hover:text-cyan-300 sm:px-3">My jobs</a>
-          <a href="/leaderboard" class="rounded-lg px-2 py-1.5 text-slate-200 transition hover:bg-white/10 hover:text-cyan-300 sm:px-3">Leaderboard</a>
-          <button id="hub-logout" type="button" class="btn-secondary px-3 py-1.5 text-xs sm:text-sm">Log out</button>
-        </nav>
-      </div>
-    </header>
-
-    <main class="section-shell-wide">
-      <slot />
-    </main>
-
-    <footer class="border-t border-white/10 px-6 py-6 text-center text-sm text-slate-400">
-      <a href="/" class="text-cyan-300 hover:text-cyan-200">← Back to main site</a>
-    </footer>
+  <body class="hub-body" data-require-auth={requireAuth ? "true" : "false"}>
+    {
+      requireAuth ? (
+        <div class="hub-shell">
+          <HubSidebar />
+          <div class="hub-main">
+            <HubTopBar breadcrumbs={breadcrumbs} />
+            <div class:list={["hub-content", { "hub-content--full": fullWidth }]}>
+              <slot />
+            </div>
+            <footer class="hub-footer">
+              Copyright {new Date().getFullYear()} © {siteConfig.name}
+            </footer>
+          </div>
+        </div>
+      ) : (
+        <main class="hub-login-shell">
+          <slot />
+        </main>
+      )
+    }
 
     <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
-      import { setupHubRouteGuard } from "../scripts/hub-auth";
+      import { getAuthHeaders, onIdentityReady, setupHubRouteGuard } from "../scripts/hub-auth";
 
       const requireAuth = document.body.dataset.requireAuth === "true";
       setupHubRouteGuard(requireAuth);
+
+      function setHubProfile(name: string) {
+        const initial = name.charAt(0).toUpperCase() || "?";
+        document.getElementById("hub-sidebar-name")!.textContent = name;
+        document.getElementById("hub-sidebar-avatar")!.textContent = initial;
+        const topAvatar = document.getElementById("hub-topbar-avatar");
+        if (topAvatar) topAvatar.textContent = initial;
+      }
+
+      async function loadHubProfile() {
+        try {
+          const response = await fetch("/api/my-stats", { headers: getAuthHeaders() });
+          const data = await response.json();
+          if (response.ok && data.driver?.name) {
+            setHubProfile(data.driver.name);
+            return;
+          }
+        } catch {
+          /* fall through */
+        }
+
+        const user = window.netlifyIdentity?.currentUser();
+        if (user?.email) {
+          const fallback = user.email.split("@")[0] ?? "Driver";
+          setHubProfile(fallback);
+        }
+      }
+
+      onIdentityReady((user) => {
+        if (user && requireAuth) loadHubProfile();
+      });
 
       document.getElementById("hub-logout")?.addEventListener("click", () => {
         window.netlifyIdentity?.logout();

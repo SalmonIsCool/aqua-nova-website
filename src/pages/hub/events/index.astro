@@ -1,0 +1,54 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import { getCollection } from "astro:content";
+
+const now = new Date();
+const events = (await getCollection("events")).sort((a, b) => a.data.date.valueOf() - b.data.date.valueOf());
+const upcoming = events.filter((event) => event.data.date.valueOf() >= now.valueOf());
+const past = events.filter((event) => event.data.date.valueOf() < now.valueOf()).reverse();
+const displayEvents = [...upcoming, ...past];
+---
+
+<HubLayout
+  title="Events"
+  breadcrumbs={[{ label: "Home", href: "/hub/" }, { label: "Events" }]}
+>
+  <h1 class="hub-page-title">Events</h1>
+
+  <div class="mt-6 grid gap-6">
+    {
+      displayEvents.length === 0 ? (
+        <p class="text-slate-400">No events published yet. Check back soon.</p>
+      ) : (
+        displayEvents.map((event) => (
+          <article class="hub-event-card overflow-hidden lg:flex">
+            <div class="flex h-48 w-full shrink-0 items-center justify-center bg-[#081638] text-6xl lg:h-auto lg:w-72">
+              📅
+            </div>
+            <div class="flex flex-1 flex-col p-6">
+              <h2 class="text-xl font-bold text-white">{event.data.title}</h2>
+              <p class="mt-2 text-sm text-slate-400">
+                {event.data.date.toLocaleString(undefined, {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit"
+                })}
+              </p>
+              {event.data.location && <p class="mt-1 text-sm text-cyan-300">{event.data.location}</p>}
+              <p class="mt-4 flex-1 text-slate-300">{event.data.excerpt}</p>
+              <a
+                href={`/hub/events/${event.id}`}
+                class="mt-4 inline-flex text-sm font-semibold text-cyan-300 hover:text-cyan-200"
+              >
+                View event →
+              </a>
+            </div>
+          </article>
+        ))
+      )
+    }
+  </div>
+</HubLayout>

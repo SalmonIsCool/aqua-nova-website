@@ -1,0 +1,63 @@
+---
+import HubLayout from "../../../layouts/HubLayout.astro";
+import StaffApplicationForm from "../../../components/hub/StaffApplicationForm.astro";
+import { staffRoles } from "../../../data/staff-roles";
+
+const role = staffRoles.find((item) => item.slug === "public-relations")!;
+---
+
+<HubLayout
+  title="Public Relations"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Apply for staff", href: "/hub/staff" },
+    { label: "Public Relations" }
+  ]}
+>
+  <h1 class="hub-page-title">Public Relations application</h1>
+  <p class="mt-2 max-w-2xl text-slate-400">{role.description}</p>
+
+  <div class="mt-6 max-w-2xl">
+    <StaffApplicationForm
+      roleTitle={role.title}
+      formName={role.formName}
+      applicationType={role.applicationType}
+      fields={[
+        { name: "name", label: "Full name" },
+        { name: "email", label: "Email address", type: "email" },
+        { name: "discord_username", label: "Discord username" },
+        {
+          name: "truckersmp_profile",
+          label: "TruckersMP profile link",
+          type: "url",
+          placeholder: "https://truckersmp.com/user/..."
+        },
+        {
+          name: "platforms",
+          label: "Which social media platforms are you comfortable managing?",
+          type: "textarea",
+          rows: 3,
+          placeholder: "e.g. Instagram, X, Facebook, TikTok"
+        },
+        {
+          name: "pr_experience",
+          label: "Describe your experience with public relations or social media management.",
+          type: "textarea",
+          rows: 5
+        },
+        {
+          name: "content_ideas",
+          label: "Share an idea for a post or campaign that would represent Aqua Nova well.",
+          type: "textarea",
+          rows: 5
+        },
+        {
+          name: "why_pr",
+          label: "Why do you want to join the Public Relations Team?",
+          type: "textarea",
+          rows: 4
+        }
+      ]}
+    />
+  </div>
+</HubLayout>

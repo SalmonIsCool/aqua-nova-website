@@ -1,0 +1,62 @@
+---
+import HubLayout from "../../layouts/HubLayout.astro";
+import { getCollection } from "astro:content";
+
+const mediaItems = (await getCollection("media")).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const featured = mediaItems[0] ?? null;
+const albums = mediaItems.slice(1);
+---
+
+<HubLayout title="Gallery" breadcrumbs={[{ label: "Home", href: "/hub/" }, { label: "Gallery" }]}>
+  <h1 class="hub-page-title">Aqua Nova Gallery</h1>
+  <p class="mt-2 text-slate-400">Official media from the team.</p>
+
+  {
+    featured ? (
+      <article class="hub-panel mt-6 overflow-hidden p-0">
+        {featured.data.image ? (
+          <img src={featured.data.image} alt={featured.data.title} class="h-64 w-full object-cover md:h-80" />
+        ) : (
+          <div class="flex h-64 items-center justify-center bg-[#081638] text-6xl md:h-80">🖼</div>
+        )}
+        <div class="p-6 text-center">
+          <h2 class="text-xl font-bold text-white">{featured.data.title}</h2>
+          <p class="mt-2 text-slate-300">{featured.data.excerpt}</p>
+          {featured.data.url && (
+            <a href={featured.data.url} class="mt-4 inline-flex text-sm font-semibold text-cyan-300 hover:text-cyan-200" target="_blank" rel="noreferrer">
+              Open link →
+            </a>
+          )}
+        </div>
+      </article>
+    ) : (
+      <p class="mt-6 text-slate-400">No media published yet.</p>
+    )
+  }
+
+  {
+    albums.length > 0 && (
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {albums.map((item) => (
+          <article class="hub-news-card overflow-hidden">
+            {item.data.image ? (
+              <img src={item.data.image} alt={item.data.title} class="h-40 w-full object-cover" loading="lazy" />
+            ) : (
+              <div class="flex h-40 items-center justify-center bg-[#081638] text-4xl">📷</div>
+            )}
+            <div class="p-4">
+              <p class="text-xs uppercase tracking-wide text-slate-500">{item.data.type}</p>
+              <h3 class="mt-1 font-semibold text-white">{item.data.title}</h3>
+              <p class="mt-2 text-sm text-slate-400">{item.data.excerpt}</p>
+              {item.data.url && (
+                <a href={item.data.url} class="mt-3 inline-flex text-sm text-cyan-300 hover:text-cyan-200" target="_blank" rel="noreferrer">
+                  Open →
+                </a>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    )
+  }
+</HubLayout>
