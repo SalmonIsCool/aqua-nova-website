@@ -18,24 +18,20 @@ export const driverRanks: DriverRank[] = [
   { name: "Grandmaster Driver", minKm: 1_500_000, color: "#F44336" }
 ];
 
-export function toRankDistanceKm(distance: number, unit: "km" | "mi" = "km") {
-  const value = Math.max(0, Number(distance) || 0);
-  return unit === "mi" ? Math.round(value * 1.60934) : Math.round(value);
-}
-
-export function getRankProgress(totalDistanceKm: number) {
+export function getRankProgress(totalDistanceKm: number, ranks: DriverRank[] = driverRanks) {
   const totalKm = Math.max(0, Math.round(totalDistanceKm));
+  const ladder = ranks.length ? ranks : driverRanks;
 
   let currentIndex = 0;
-  for (let index = driverRanks.length - 1; index >= 0; index -= 1) {
-    if (totalKm >= driverRanks[index].minKm) {
+  for (let index = ladder.length - 1; index >= 0; index -= 1) {
+    if (totalKm >= ladder[index].minKm) {
       currentIndex = index;
       break;
     }
   }
 
-  const current = driverRanks[currentIndex];
-  const next = driverRanks[currentIndex + 1] ?? null;
+  const current = ladder[currentIndex];
+  const next = ladder[currentIndex + 1] ?? null;
 
   if (!next) {
     return {

@@ -1,6 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import { authenticateHubRequest } from "./lib/auth";
-import { getRankProgress, toRankDistanceKm } from "./lib/ranks";
+import { fetchCompanyRanks, fetchDriverTotalDistanceKm } from "./lib/driver-distance";
+import { getRankProgress } from "./lib/ranks";
 import { truckyFetch } from "./lib/trucky";
 
 function json(statusCode: number, body: unknown) {
@@ -32,9 +33,10 @@ export const handler: Handler = async (event, context) => {
       return json(500, { error: "Trucky API is not configured on the server." });
     }
 
-    const [statsResponse, userResponse] = await Promise.all([
+    const [statsResponse, totalDistanceKm, companyRanks] = await Promise.all([
       truckyFetch(`/api/v2/company/${companyId}/stats/members`, query),
-      truckyFetch(`/api/v2/user/${auth.driver.truckyUserId}`)
+      fetchDriverTotalDistanceKm(companyId, auth.driver.truckyUserId),
+      fetchCompanyRanks(companyId)
     ]);
 
     if (!statsResponse.ok) {
@@ -47,18 +49,12 @@ export const handler: Handler = async (event, context) => {
       (member: { user_id: number }) => Number(member.user_id) === auth.driver.truckyUserId
     );
 
-    let totalDistanceKm = 0;
-    if (userResponse.ok) {
-      const userData = await userResponse.json();
-      // Trucky rank thresholds are in km; total_driven_distance is stored in km.
-      totalDistanceKm = toRankDistanceKm(Number(userData.total_driven_distance ?? 0), "km");
-    }
-
     return json(200, {
       driver: auth.driver,
       period,
       month: Number(month),
       year: Number(year),
+      totalDistanceKm,
       stats: mine
         ? {
             drivenDistanceKm: Math.round(mine.driven_distance),
@@ -72,7 +68,7 @@ export const handler: Handler = async (event, context) => {
             cargoMass: 0,
             revenue: 0
           },
-      rank: getRankProgress(totalDistanceKm)
+      rank: getRankProgress(totalDistanceKm, companyRanks ?? undefined)
     });
   } catch {
     return json(500, { error: "Failed to load your stats." });
