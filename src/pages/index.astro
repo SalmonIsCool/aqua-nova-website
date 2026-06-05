@@ -74,3 +74,31 @@ const announcements = (await getCollection("news"))
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  const salmonEl = document.getElementById("salmon-easter-egg");
+  if (salmonEl) {
+    const audio = new Audio("/assets/salmon-easter-egg.mp3");
+    let clickCount = 0;
+    let lastClickAt = 0;
+    const clickWindowMs = 2000;
+    const clicksRequired = 5;
+
+    salmonEl.addEventListener("click", () => {
+      const now = Date.now();
+
+      if (now - lastClickAt > clickWindowMs) {
+        clickCount = 0;
+      }
+
+      clickCount += 1;
+      lastClickAt = now;
+
+      if (clickCount >= clicksRequired) {
+        clickCount = 0;
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      }
+    });
+  }
+</script>

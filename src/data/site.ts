@@ -8,12 +8,13 @@ export const siteConfig = {
   discordWidgetApiUrl: "https://discord.com/api/guilds/1444433718898065575/widget.json"
 };
 
+export const driversHubLink = { href: "/hub", label: "Drivers Hub" };
+
 export const navLinks = [
   { href: "/", label: "Home" },
   { href: "/apply", label: "Apply" },
   { href: "/news", label: "Announcements" },
   { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/hub", label: "Drivers Hub" },
   { href: "/events", label: "Events" },
   { href: "/media", label: "Media" },
   { href: "/discord", label: "Discord" },

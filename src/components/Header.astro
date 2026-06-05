@@ -1,41 +1,25 @@
 ---
-import { navLinks, siteConfig } from "../data/site";
+import { driversHubLink, navLinks, siteConfig } from "../data/site";
+
 const currentPath = Astro.url.pathname;
+const isHubActive = currentPath === "/hub" || currentPath.startsWith("/hub/");
 ---
 
 <header class="sticky top-0 z-50 border-b border-white/10 bg-[#061a52]/90 backdrop-blur-md">
-  <div class="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+  <div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
     <a href="/" class="flex min-w-0 items-center gap-2 sm:gap-3">
       <img src="/assets/logo.png" alt="" class="h-10 w-10 shrink-0 rounded-full sm:h-11 sm:w-11" width="44" height="44" />
       <span class="truncate text-base font-semibold text-cyan-300 sm:text-lg">{siteConfig.name}</span>
     </a>
 
-    <nav class="hidden items-center gap-1 lg:flex" aria-label="Main">
-      {
-        navLinks.map((link) => (
-          <a
-            href={link.href}
-            class={`rounded-lg px-3 py-2 text-sm transition hover:bg-white/10 hover:text-cyan-300 ${
-              currentPath === link.href ? "bg-white/10 text-cyan-300" : "text-slate-200"
-            }`}
-          >
-            {link.label}
-          </a>
-        ))
-      }
-    </nav>
-
-    <details class="relative lg:hidden">
-      <summary class="list-none cursor-pointer rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/10 [&::-webkit-details-marker]:hidden">
-        Menu
-      </summary>
-      <nav class="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-[#0a2a8a] p-2 shadow-xl" aria-label="Mobile">
+    <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+      <nav class="hidden items-center gap-1 lg:flex" aria-label="Main">
         {
           navLinks.map((link) => (
             <a
               href={link.href}
-              class={`block rounded-lg px-3 py-2.5 text-sm transition hover:bg-white/10 ${
-                currentPath === link.href ? "bg-white/10 text-cyan-300" : "text-slate-100"
+              class={`rounded-lg px-3 py-2 text-sm transition hover:bg-white/10 hover:text-cyan-300 ${
+                currentPath === link.href ? "bg-white/10 text-cyan-300" : "text-slate-200"
               }`}
             >
               {link.label}
@@ -43,6 +27,33 @@ const currentPath = Astro.url.pathname;
           ))
         }
       </nav>
-    </details>
+
+      <a
+        href={driversHubLink.href}
+        class:list={["drivers-hub-pill", isHubActive && "drivers-hub-pill--active"]}
+      >
+        {driversHubLink.label}
+      </a>
+
+      <details class="relative lg:hidden">
+        <summary class="list-none cursor-pointer rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+          Menu
+        </summary>
+        <nav class="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-[#0a2a8a] p-2 shadow-xl" aria-label="Mobile">
+          {
+            navLinks.map((link) => (
+              <a
+                href={link.href}
+                class={`block rounded-lg px-3 py-2.5 text-sm transition hover:bg-white/10 ${
+                  currentPath === link.href ? "bg-white/10 text-cyan-300" : "text-slate-100"
+                }`}
+              >
+                {link.label}
+              </a>
+            ))
+          }
+        </nav>
+      </details>
+    </div>
   </div>
 </header>
