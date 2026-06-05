@@ -5,12 +5,8 @@ import HubLayout from "../../layouts/HubLayout.astro";
 <HubLayout title="Job details">
   <div>
     <a href="/hub/jobs" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to my jobs</a>
-    <h1 id="job-title" class="section-title mt-4">Job details</h1>
-    <p id="job-status-line" class="mt-2 text-slate-400">Loading…</p>
-    <div id="job-sections" class="mt-8 grid gap-6"></div>
-    <div id="job-events-wrap" class="mt-8 hidden">
-      <h2 class="text-xl font-semibold text-cyan-300">Job events</h2>
-      <div id="job-events" class="panel mt-4 overflow-x-auto"></div>
+    <div id="job-root" class="mt-6">
+      <p class="text-slate-400">Loading job…</p>
     </div>
   </div>
 </HubLayout>
@@ -18,226 +14,272 @@ import HubLayout from "../../layouts/HubLayout.astro";
 <script>
   import { getAuthHeaders, onIdentityReady } from "../../scripts/hub-auth";
 
-  const formatter = new Intl.NumberFormat("en-GB");
+  const formatter = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
 
-  const sections: { title: string; fields: string[] }[] = [
-    {
-      title: "Route",
-      fields: [
-        "source_city_name",
-        "destination_city_name",
-        "source_company_name",
-        "destination_company_name",
-        "planned_distance_km",
-        "driven_distance_km"
-      ]
-    },
-    {
-      title: "Cargo",
-      fields: ["cargo_name", "cargo_mass", "cargo_mass_t", "cargo_unit_count", "cargo_unit_mass", "cargo_damage"]
-    },
-    {
-      title: "Vehicle & trailer",
-      fields: [
-        "vehicle_brand_name",
-        "vehicle_model_name",
-        "trailer_name",
-        "trailer_body_type",
-        "trailer_chain_type",
-        "vehicle_odometer_start",
-        "vehicle_odometer_end"
-      ]
-    },
-    {
-      title: "Financials",
-      fields: [
-        "revenue",
-        "income",
-        "game_income",
-        "taxes",
-        "fuel_cost",
-        "fuel_used_l",
-        "rent_cost_total",
-        "rent_cost_per_km",
-        "other_costs_total",
-        "damage_cost",
-        "currency"
-      ]
-    },
-    {
-      title: "Damage",
-      fields: ["vehicle_damage", "trailers_damage", "cargo_damage", "damage_cost_details"]
-    },
-    {
-      title: "Timing",
-      fields: [
-        "created_at",
-        "started_at",
-        "completed_at",
-        "canceled_at",
-        "real_driving_time_seconds",
-        "late_delivery",
-        "in_game_delivery_time"
-      ]
-    },
-    {
-      title: "Game info",
-      fields: [
-        "game_id",
-        "market",
-        "game_mode",
-        "server",
-        "in_game_profile_name",
-        "max_speed",
-        "average_speed_kmh",
-        "auto_load",
-        "auto_park",
-        "warp"
-      ]
-    }
-  ];
+  const timelineEventTypes = new Set([
+    "tollgate_paid",
+    "transport_used",
+    "fined",
+    "refuel",
+    "collision",
+    "teleport"
+  ]);
 
-  const labels: Record<string, string> = {
-    source_city_name: "From city",
-    destination_city_name: "To city",
-    source_company_name: "From company",
-    destination_company_name: "To company",
-    planned_distance_km: "Planned distance (km)",
-    driven_distance_km: "Driven distance (km)",
-    cargo_name: "Cargo",
-    cargo_mass: "Cargo mass",
-    cargo_mass_t: "Cargo mass (t)",
-    cargo_unit_count: "Cargo units",
-    cargo_unit_mass: "Unit mass",
-    vehicle_brand_name: "Truck brand",
-    vehicle_model_name: "Truck model",
-    trailer_name: "Trailer",
-    trailer_body_type: "Trailer body",
-    trailer_chain_type: "Trailer chain",
-    vehicle_odometer_start: "Odometer start",
-    vehicle_odometer_end: "Odometer end",
-    revenue: "Revenue",
-    income: "Income",
-    game_income: "Game income",
-    taxes: "Taxes",
-    fuel_cost: "Fuel cost",
-    fuel_used_l: "Fuel used (L)",
-    rent_cost_total: "Rent total",
-    rent_cost_per_km: "Rent per km",
-    other_costs_total: "Other costs",
-    damage_cost: "Damage cost",
-    currency: "Currency",
-    vehicle_damage: "Vehicle damage",
-    trailers_damage: "Trailer damage",
-    cargo_damage: "Cargo damage",
-    damage_cost_details: "Damage details",
-    created_at: "Created",
-    started_at: "Started",
-    completed_at: "Completed",
-    canceled_at: "Canceled",
-    real_driving_time_seconds: "Real driving time (sec)",
-    late_delivery: "Late delivery",
-    in_game_delivery_time: "In-game delivery time",
-    game_id: "Game",
-    market: "Market",
-    game_mode: "Game mode",
-    server: "Server",
-    in_game_profile_name: "In-game profile",
-    max_speed: "Max speed",
-    average_speed_kmh: "Average speed (km/h)",
-    auto_load: "Auto load",
-    auto_park: "Auto park",
-    warp: "Warp",
-    status: "Status",
-    stats_type: "Stats type",
-    special_job: "Special job"
+  const eventIcons: Record<string, string> = {
+    tollgate_paid: "⛃",
+    transport_used: "⛴",
+    fined: "⚠",
+    refuel: "⛽",
+    collision: "💥",
+    teleport: "↯"
   };
 
-  function formatValue(key: string, value: unknown) {
-    if (value === null || value === undefined || value === "") return "—";
-    if (typeof value === "boolean") return value ? "Yes" : "No";
-    if (key.includes("_at") && typeof value === "string") return new Date(value).toLocaleString();
-    if (key === "game_id") return Number(value) === 1 ? "ETS2" : Number(value) === 2 ? "ATS" : String(value);
-    if (typeof value === "number") return formatter.format(value);
-    if (typeof value === "object") return JSON.stringify(value, null, 2);
-    return String(value);
+  function formatDate(value: unknown) {
+    if (!value || typeof value !== "string") return "—";
+    return new Date(value).toLocaleString();
   }
 
-  function renderSection(title: string, job: Record<string, unknown>, fields: string[]) {
-    const rows = fields
-      .map((field) => {
-        const value = job[field];
-        if (value === null || value === undefined || value === "") return "";
-        return `<div class="flex flex-col gap-1 border-b border-white/5 py-3 sm:flex-row sm:justify-between">
-          <dt class="text-slate-400">${labels[field] ?? field}</dt>
-          <dd class="font-medium text-white sm:text-right">${formatValue(field, value)}</dd>
+  function formatDistance(job: Record<string, unknown>, field: "planned" | "driven") {
+    const km = field === "planned" ? job.planned_distance_km : job.driven_distance_km;
+    const raw = field === "planned" ? job.planned_distance : job.driven_distance;
+    const unit = String(job.distance_unit ?? "km");
+
+    if (typeof km === "number" && km > 0) {
+      return unit === "mi" ? `${formatter.format(km)} mi` : `${formatter.format(km)} km`;
+    }
+    if (typeof raw === "number" && raw > 0) {
+      return `${formatter.format(raw)} ${unit}`;
+    }
+    return "—";
+  }
+
+  function formatDuration(seconds: unknown) {
+    const total = Number(seconds);
+    if (!total || Number.isNaN(total)) return "—";
+    const mins = Math.round(total / 60);
+    return `${mins} min`;
+  }
+
+  function formatFuel(job: Record<string, unknown>) {
+    const liters = Number(job.fuel_used_l ?? job.fuel_used ?? 0);
+    const distanceMi =
+      Number(job.driven_distance_km) > 0 && job.distance_unit === "mi"
+        ? Number(job.driven_distance_km)
+        : Number(job.driven_distance_km) * 0.621371;
+
+    if (!liters) return "—";
+
+    if (distanceMi > 0) {
+      const gallons = liters * 0.264172;
+      const mpg = gallons > 0 ? distanceMi / gallons : 0;
+      return `${formatter.format(mpg)} mpg (${formatter.format(liters)} l)`;
+    }
+
+    return `${formatter.format(liters)} l`;
+  }
+
+  function totalDamage(job: Record<string, unknown>) {
+    const values = [job.vehicle_damage, job.trailers_damage, job.cargo_damage]
+      .map((v) => Number(v))
+      .filter((v) => !Number.isNaN(v));
+    if (!values.length) return "0%";
+    const max = Math.max(...values);
+    return `${formatter.format(max)}%`;
+  }
+
+  function formatMarket(market: unknown) {
+    if (!market) return "Job";
+    return String(market).replace(/_/g, " ");
+  }
+
+  function eventLabel(event: Record<string, unknown>) {
+    const type = String(event.event_type ?? "");
+    if (type === "transport_used") {
+      const attrs = event.attributes as Record<string, unknown> | undefined;
+      const mode = attrs?.event ?? attrs?.transport ?? "transport";
+      return String(mode).charAt(0).toUpperCase() + String(mode).slice(1);
+    }
+    if (type === "fined") {
+      const attrs = event.attributes as Record<string, unknown> | undefined;
+      return attrs?.offence ? `Fine (${String(attrs.offence).replace(/_/g, " ")})` : "Fine";
+    }
+    const labels: Record<string, string> = {
+      tollgate_paid: "Tollgate",
+      refuel: "Refuel",
+      collision: "Collision",
+      teleport: "Teleport"
+    };
+    return labels[type] ?? type.replace(/_/g, " ");
+  }
+
+  function renderTimeline(events: Record<string, unknown>[], job: Record<string, unknown>) {
+    const filtered = events
+      .filter((event) => timelineEventTypes.has(String(event.event_type)))
+      .sort((a, b) => new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime());
+
+    if (!filtered.length) return "";
+
+    const start = new Date(String(job.started_at ?? job.created_at)).getTime();
+    const end = new Date(String(job.completed_at ?? job.updated_at ?? job.created_at)).getTime();
+    const span = Math.max(end - start, 1);
+
+    const markers = filtered
+      .map((event, index) => {
+        const time = new Date(String(event.created_at)).getTime();
+        const left = Math.min(Math.max(((time - start) / span) * 100, 4), 96);
+        const top = index % 2 === 0;
+        const type = String(event.event_type);
+        const icon = eventIcons[type] ?? "•";
+
+        const card = `<div class="job-timeline__card ${top ? "job-timeline__card--top" : "job-timeline__card--bottom"}">
+          <p class="text-slate-400">${formatDate(event.created_at)}</p>
+          <p class="mt-1 font-semibold text-white">${eventLabel(event)}</p>
+        </div>`;
+
+        return `<div class="job-timeline__event" style="left: ${left}%">
+          ${top ? card : ""}
+          <div class="job-timeline__marker">${icon}</div>
+          ${top ? "" : card}
         </div>`;
       })
-      .filter(Boolean)
       .join("");
 
-    if (!rows) return "";
-
-    return `<article class="panel">
-      <h2 class="text-lg font-semibold text-cyan-300">${title}</h2>
-      <dl class="mt-3">${rows}</dl>
-    </article>`;
+    return `<section class="job-view-card mt-6">
+      <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Route events</h2>
+      <div class="job-timeline">
+        <div class="job-timeline__line"></div>
+        ${markers}
+      </div>
+    </section>`;
   }
 
-  function renderExtras(job: Record<string, unknown>, usedFields: Set<string>) {
-    const skip = new Set([...usedFields, "id", "user_id", "company_id", "driver", "company", "vehicle", "events", "cargo_definition", "income_details", "fines_details", "transports_details", "tollgates_details", "deleted_at", "updated_at"]);
-    const extras = Object.entries(job).filter(([key, value]) => {
-      if (skip.has(key)) return false;
-      if (value === null || value === undefined || value === "") return false;
-      return typeof value !== "object";
-    });
+  function renderJob(job: Record<string, unknown>, events: Record<string, unknown>[], driverName: string) {
+    const driver = (job.driver as Record<string, unknown>) ?? {};
+    const company = (job.company as Record<string, unknown>) ?? {};
+    const currency = String(job.currency ?? "T¢");
+    const cargoTags: string[] = [];
 
-    if (extras.length === 0) return "";
+    if (job.auto_park === false) cargoTags.push("No auto park");
+    if (job.auto_load === false) cargoTags.push("No auto load");
+    if (job.market) cargoTags.push(formatMarket(job.market));
 
-    const rows = extras
-      .map(
-        ([key, value]) => `<div class="flex flex-col gap-1 border-b border-white/5 py-3 sm:flex-row sm:justify-between">
-          <dt class="text-slate-400">${labels[key] ?? key}</dt>
-          <dd class="font-medium text-white sm:text-right">${formatValue(key, value)}</dd>
-        </div>`
-      )
-      .join("");
+    const vehicleName = [job.vehicle_brand_name, job.vehicle_model_name].filter(Boolean).join(" ") || "—";
+    const odometer = job.vehicle_odometer_end ?? job.vehicle_odometer_start;
 
-    return `<article class="panel">
-      <h2 class="text-lg font-semibold text-cyan-300">Additional details</h2>
-      <dl class="mt-3">${rows}</dl>
-    </article>`;
-  }
+    return `
+      <section class="job-view-card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500/20 text-lg font-bold text-cyan-200">
+            ${(driverName || "D").charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p class="text-lg font-semibold text-white">${driverName || String(driver.name ?? "Driver")}</p>
+            <p class="text-sm text-slate-400">Aqua Nova driver</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <img src="/assets/logo.png" alt="" class="h-12 w-12 rounded-full" />
+          <div class="text-right">
+            <p class="font-semibold text-white">${String(company.name ?? "Aqua Nova Transport")}</p>
+            <p class="text-sm text-slate-400">VTC Hub</p>
+          </div>
+        </div>
+      </section>
 
-  function renderNested(label: string, obj: Record<string, unknown> | null | undefined) {
-    if (!obj || typeof obj !== "object") return "";
-    const rows = Object.entries(obj)
-      .filter(([, value]) => value !== null && value !== undefined && value !== "")
-      .map(
-        ([key, value]) => `<div class="flex flex-col gap-1 border-b border-white/5 py-2 sm:flex-row sm:justify-between">
-          <dt class="text-slate-400">${key}</dt>
-          <dd class="text-white sm:text-right">${typeof value === "object" ? JSON.stringify(value) : String(value)}</dd>
-        </div>`
-      )
-      .join("");
+      <section class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="job-stat-tile">
+          <span class="text-2xl">🛣</span>
+          <p class="text-xl font-bold text-white">${formatDistance(job, "driven")}</p>
+        </div>
+        <div class="job-stat-tile">
+          <span class="text-2xl">⛽</span>
+          <p class="text-sm font-semibold text-white">${formatFuel(job)}</p>
+        </div>
+        <div class="job-stat-tile">
+          <span class="text-2xl">💔</span>
+          <p class="text-xl font-bold text-white">${totalDamage(job)}</p>
+        </div>
+        <div class="job-stat-tile">
+          <span class="text-2xl">⏳</span>
+          <p class="text-xl font-bold text-white">${formatDuration(job.real_driving_time_seconds)}</p>
+        </div>
+      </section>
 
-    if (!rows) return "";
+      <section class="mt-4 grid gap-4 lg:grid-cols-3">
+        <article class="job-view-card">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">From</h3>
+          <p class="mt-2 text-2xl font-bold text-white">${job.source_city_name ?? "—"}</p>
+          <p class="text-slate-300">${job.source_company_name ?? "—"}</p>
+        </article>
+        <article class="job-view-card">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">To</h3>
+          <p class="mt-2 text-2xl font-bold text-white">${job.destination_city_name ?? "—"}</p>
+          <p class="text-slate-300">${job.destination_company_name ?? "—"}</p>
+        </article>
+        <article class="job-view-card">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Vehicle</h3>
+          <p class="mt-2 text-2xl font-bold text-white">${vehicleName}</p>
+          <p class="text-slate-300">${odometer ? `${formatter.format(Number(odometer))} ${job.distance_unit ?? "km"}` : "—"}</p>
+        </article>
+      </section>
 
-    return `<article class="panel">
-      <h2 class="text-lg font-semibold text-cyan-300">${label}</h2>
-      <dl class="mt-3">${rows}</dl>
-    </article>`;
+      <section class="mt-4 grid gap-4 lg:grid-cols-3">
+        <article class="job-view-card">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="job-badge job-badge--market">${formatMarket(job.market)}</span>
+            ${cargoTags.map((tag) => `<span class="job-badge job-badge--tag">${tag}</span>`).join("")}
+          </div>
+          <p class="mt-4 text-xl font-bold text-white">${job.cargo_name ?? "—"}</p>
+          <p class="text-slate-300">${job.cargo_mass_t ? `${formatter.format(Number(job.cargo_mass_t))} t` : job.cargo_mass ? `${formatter.format(Number(job.cargo_mass))} kg` : "—"}</p>
+        </article>
+        <article class="job-view-card">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Distance</h3>
+          <div class="mt-4 space-y-2">
+            <div class="flex justify-between"><span class="text-slate-400">Planned</span><span class="font-semibold text-white">${formatDistance(job, "planned")}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Real</span><span class="font-semibold text-white">${formatDistance(job, "driven")}</span></div>
+          </div>
+        </article>
+        <article class="job-view-card">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Timing</h3>
+            <span class="job-badge ${job.late_delivery ? "bg-rose-500/20 text-rose-300" : "job-badge--ok"}">${job.late_delivery ? "Late" : "On time"}</span>
+          </div>
+          <div class="mt-4 space-y-2">
+            <div class="flex justify-between gap-4"><span class="text-slate-400">Started</span><span class="text-right text-white">${formatDate(job.started_at)}</span></div>
+            <div class="flex justify-between gap-4"><span class="text-slate-400">Ended</span><span class="text-right text-white">${formatDate(job.completed_at ?? job.canceled_at)}</span></div>
+          </div>
+        </article>
+      </section>
+
+      ${renderTimeline(events, job)}
+
+      <section class="mt-4 grid gap-4 lg:grid-cols-2">
+        <article class="job-view-card">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Finance details</h3>
+          <div class="mt-4 space-y-3">
+            <div class="flex justify-between"><span class="text-slate-400">Income</span><span class="job-finance-value">${job.income != null ? `${formatter.format(Number(job.income))} ${currency}` : "—"}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Revenue</span><span class="job-finance-value">${job.revenue != null ? `${formatter.format(Number(job.revenue))} ${currency}` : "—"}</span></div>
+          </div>
+        </article>
+        <article class="job-view-card">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Damage details</h3>
+          <div class="mt-4 space-y-3">
+            <div class="flex justify-between"><span class="text-slate-400">Vehicle damage</span><span class="job-damage-value">${formatter.format(Number(job.vehicle_damage ?? 0))}%</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Trailer(s) damage</span><span class="job-damage-value">${formatter.format(Number(job.trailers_damage ?? 0))}%</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Cargo damage</span><span class="job-damage-value">${formatter.format(Number(job.cargo_damage ?? 0))}%</span></div>
+          </div>
+        </article>
+      </section>
+    `;
   }
 
   async function loadJob() {
+    const root = document.getElementById("job-root");
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
-    const title = document.getElementById("job-title");
-    const statusLine = document.getElementById("job-status-line");
-    const sectionsEl = document.getElementById("job-sections");
 
-    if (!id) {
-      if (statusLine) statusLine.textContent = "No job ID provided.";
+    if (!id || !root) {
+      if (root) root.innerHTML = `<p class="text-slate-400">No job ID provided.</p>`;
       return;
     }
 
@@ -246,47 +288,15 @@ import HubLayout from "../../layouts/HubLayout.astro";
       const data = await response.json();
 
       if (!response.ok) {
-        if (statusLine) statusLine.textContent = data.error ?? "Could not load job.";
+        root.innerHTML = `<p class="text-rose-300">${data.error ?? "Could not load job."}</p>`;
         return;
       }
 
       const job = data.job as Record<string, unknown>;
-      const usedFields = new Set<string>(["status"]);
-
-      if (title) {
-        title.textContent = `${job.source_city_name ?? "Unknown"} → ${job.destination_city_name ?? "Unknown"}`;
-      }
-      if (statusLine) {
-        statusLine.textContent = `Job #${job.id} · ${String(job.status ?? "").replace("_", " ")}`;
-      }
-
-      const html = [
-        renderSection("Overview", job, ["status", "stats_type", "special_job"]),
-        ...sections.map((section) => {
-          section.fields.forEach((field) => usedFields.add(field));
-          return renderSection(section.title, job, section.fields);
-        }),
-        renderNested("Driver", job.driver as Record<string, unknown>),
-        renderNested("Vehicle", job.vehicle as Record<string, unknown>),
-        renderNested("Company", job.company as Record<string, unknown>),
-        job.income_details ? renderNested("Income details", job.income_details as Record<string, unknown>) : "",
-        renderExtras(job, usedFields)
-      ]
-        .filter(Boolean)
-        .join("");
-
-      if (sectionsEl) sectionsEl.innerHTML = html;
-
       const events = Array.isArray(data.events) ? data.events : [];
-      if (events.length > 0) {
-        document.getElementById("job-events-wrap")?.classList.remove("hidden");
-        const eventsEl = document.getElementById("job-events");
-        if (eventsEl) {
-          eventsEl.innerHTML = `<pre class="overflow-x-auto text-xs text-slate-200">${JSON.stringify(events, null, 2)}</pre>`;
-        }
-      }
+      root.innerHTML = renderJob(job, events, data.driver?.name ?? "Driver");
     } catch {
-      if (statusLine) statusLine.textContent = "Could not reach the hub API.";
+      root.innerHTML = `<p class="text-rose-300">Could not reach the hub API.</p>`;
     }
   }
 

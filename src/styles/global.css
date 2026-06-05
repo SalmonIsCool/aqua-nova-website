@@ -86,3 +86,63 @@ summary:focus-visible {
 .input-field {
   @apply w-full rounded-xl border border-white/15 bg-slate-950/80 px-4 py-3 text-white transition focus:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/30;
 }
+
+.job-view-card {
+  @apply rounded-xl border border-white/10 bg-[#141f45]/90 p-5 shadow-lg shadow-blue-950/30;
+}
+
+.job-stat-tile {
+  @apply flex flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#141f45]/90 px-4 py-5 text-center;
+}
+
+.job-badge {
+  @apply inline-flex rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide;
+}
+
+.job-badge--market {
+  @apply bg-pink-500/20 text-pink-300;
+}
+
+.job-badge--ok {
+  @apply bg-emerald-500/20 text-emerald-300;
+}
+
+.job-badge--tag {
+  @apply bg-emerald-500/15 text-emerald-200;
+}
+
+.job-timeline {
+  @apply relative mt-10 rounded-xl border border-white/10 bg-[#101a38]/90 px-4 py-16 sm:px-8;
+}
+
+.job-timeline__line {
+  @apply absolute left-8 right-8 top-1/2 h-0.5 -translate-y-1/2 bg-slate-600/80;
+}
+
+.job-timeline__event {
+  @apply absolute flex w-[9.5rem] -translate-x-1/2 flex-col items-center;
+}
+
+.job-timeline__marker {
+  @apply z-10 flex h-8 w-8 items-center justify-center rounded-md bg-rose-600 text-sm shadow-md;
+}
+
+.job-timeline__card {
+  @apply w-full rounded-lg border border-white/10 bg-[#1a2752] px-3 py-2 text-center text-xs shadow-lg;
+}
+
+.job-timeline__card--top {
+  @apply mb-3;
+}
+
+.job-timeline__card--bottom {
+  @apply mt-3;
+}
+
+.job-finance-value {
+  @apply font-semibold text-cyan-300;
+}
+
+.job-damage-value {
+  @apply font-semibold text-emerald-400;
+}

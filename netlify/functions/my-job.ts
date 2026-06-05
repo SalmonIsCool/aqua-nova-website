@@ -35,12 +35,17 @@ export const handler: Handler = async (event, context) => {
     }
 
     const eventsResponse = await truckyFetch(`/api/v1/job/${jobId}/events`);
-    const events = eventsResponse.ok ? await eventsResponse.json() : [];
+    const fetchedEvents = eventsResponse.ok ? await eventsResponse.json() : [];
+    const fromApi = Array.isArray(fetchedEvents) ? fetchedEvents : Array.isArray(fetchedEvents?.data) ? fetchedEvents.data : [];
+    const fromJob = Array.isArray(job.events) ? job.events : [];
+    const events = [...fromJob, ...fromApi].filter(
+      (event, index, list) => list.findIndex((item) => item.id === event.id) === index
+    );
 
     return json(200, {
       driver: auth.driver,
       job,
-      events: Array.isArray(events) ? events : Array.isArray(events?.data) ? events.data : []
+      events
     });
   } catch {
     return json(500, { error: "Failed to load job details." });
