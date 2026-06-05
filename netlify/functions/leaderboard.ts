@@ -90,8 +90,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
     });
 
     const leaderboard: LeaderboardEntry[] = sorted.map((member, index) => {
-      const meta = memberMeta.get(member.user_id);
-      const rankProgress = getRankProgress(meta?.lifetimeDistanceKm ?? 0);
+      const userId = Number(member.user_id);
+      const meta = memberMeta.get(userId);
+      const vtcLifetimeKm = meta?.lifetimeDistanceKm ?? 0;
+      const rankProgress = getRankProgress(vtcLifetimeKm);
 
       return {
         rank: index + 1,

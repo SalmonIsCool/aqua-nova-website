@@ -82,6 +82,17 @@ export function memberMatches(record: Record<string, unknown>, truckyUserId: num
   return Number(record.id) === truckyUserId || Number(record.user_id) === truckyUserId;
 }
 
+/** Trucky user id — must match stats/members `user_id` for lookups. */
+export function resolveTruckyUserId(record: Record<string, unknown>) {
+  const userId = Number(record.user_id);
+  if (Number.isFinite(userId) && userId > 0) return userId;
+
+  const id = Number(record.id);
+  if (Number.isFinite(id) && id > 0) return id;
+
+  return null;
+}
+
 export async function fetchAllCompanyMembers(companyId: string) {
   const members: Record<string, unknown>[] = [];
   let page = 1;
@@ -134,13 +145,84 @@ export interface MemberLeaderboardMeta {
   lifetimeDistanceKm: number;
 }
 
+async function fetchCompanyYearlyDistanceByUser(companyId: string) {
+  const now = new Date();
+  const map = new Map<number, number>();
+
+  for (let year = now.getFullYear(); year >= VTC_STATS_START_YEAR; year -= 1) {
+    const query = new URLSearchParams({
+      period: "yearly",
+      year: String(year)
+    });
+    const response = await truckyFetch(`/api/v2/company/${companyId}/stats/members`, query);
+    if (!response.ok) continue;
+
+    const data = await response.json();
+    const members = Array.isArray(data.members) ? data.members : [];
+
+    for (const member of members) {
+      const userId = Number(member.user_id);
+      if (!Number.isFinite(userId)) continue;
+      const distance = Math.round(member.driven_distance ?? 0);
+      map.set(userId, (map.get(userId) ?? 0) + distance);
+    }
+  }
+
+  return map;
+}
+
+/** VTC all-time km per driver — same sources as the Drivers Hub rank progress. */
+export async function fetchVtcLifetimeKmMap(
+  companyId: string,
+  memberList?: Record<string, unknown>[]
+) {
+  const members = memberList ?? (await getCachedCompanyMembers(companyId));
+  const yearlyByUser = await fetchCompanyYearlyDistanceByUser(companyId);
+  const map = new Map<number, number>();
+  const needsMonthly: number[] = [];
+  const userIds = new Set<number>();
+
+  for (const member of members) {
+    const userId = resolveTruckyUserId(member);
+    if (userId !== null) userIds.add(userId);
+  }
+
+  for (const userId of yearlyByUser.keys()) {
+    userIds.add(userId);
+  }
+
+  for (const userId of userIds) {
+    const yearlyKm = yearlyByUser.get(userId) ?? 0;
+    if (yearlyKm > 0) {
+      map.set(userId, yearlyKm);
+      continue;
+    }
+
+    const member = members.find((record) => memberMatches(record, userId));
+    const fromMember = readTotalKm(member);
+    if (fromMember !== null && fromMember > 0) {
+      map.set(userId, fromMember);
+      continue;
+    }
+
+    needsMonthly.push(userId);
+  }
+
+  for (const userId of needsMonthly) {
+    map.set(userId, await fetchDriverVtcLifetimeKmFromMonthlySum(companyId, userId));
+  }
+
+  return map;
+}
+
 export async function fetchMemberLeaderboardMetaMap(companyId: string) {
   const members = await getCachedCompanyMembers(companyId);
+  const lifetimeKmMap = await fetchVtcLifetimeKmMap(companyId, members);
   const map = new Map<number, MemberLeaderboardMeta>();
 
   for (const member of members) {
-    const userId = Number(member.id ?? member.user_id);
-    if (!Number.isFinite(userId)) continue;
+    const userId = resolveTruckyUserId(member);
+    if (userId === null) continue;
 
     const roleRecord =
       member.role && typeof member.role === "object"
@@ -152,7 +234,18 @@ export async function fetchMemberLeaderboardMetaMap(companyId: string) {
       avatarUrl: readAvatarUrl(member),
       vtcRoleName: vtcRole.name,
       vtcRoleColor: vtcRole.color,
-      lifetimeDistanceKm: readTotalKm(member) ?? 0
+      lifetimeDistanceKm: lifetimeKmMap.get(userId) ?? 0
+    });
+  }
+
+  for (const [userId, lifetimeDistanceKm] of lifetimeKmMap) {
+    if (map.has(userId)) continue;
+
+    map.set(userId, {
+      avatarUrl: null,
+      vtcRoleName: "Driver",
+      vtcRoleColor: "#64748B",
+      lifetimeDistanceKm
     });
   }
 
@@ -267,12 +360,12 @@ async function resolveDriverVtcLifetimeKm(
   members: Record<string, unknown>[],
   yearlyTotals?: DriverPeriodStats
 ) {
+  const yearly = yearlyTotals ?? (await fetchDriverVtcYearlyTotals(companyId, truckyUserId));
+  if (yearly.drivenDistanceKm > 0) return yearly.drivenDistanceKm;
+
   const member = members.find((record) => memberMatches(record, truckyUserId));
   const fromMember = readTotalKm(member);
   if (fromMember !== null && fromMember > 0) return fromMember;
-
-  const yearly = yearlyTotals ?? (await fetchDriverVtcYearlyTotals(companyId, truckyUserId));
-  if (yearly.drivenDistanceKm > 0) return yearly.drivenDistanceKm;
 
   return fetchDriverVtcLifetimeKmFromMonthlySum(companyId, truckyUserId);
 }
