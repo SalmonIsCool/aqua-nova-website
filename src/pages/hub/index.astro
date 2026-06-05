@@ -434,7 +434,9 @@ const upcomingEvent = events[0] ?? null;
 
       await pause(400);
 
-      const jobsRes = await liveFetch("/api/company-jobs?page=1", { headers: authHeaders });
+      const jobsRes = await liveFetch("/api/company-jobs?page=1&status=completed", {
+        headers: authHeaders
+      });
       const jobsData = await jobsRes.json();
 
       if (jobsRes.ok && activityEl) {

@@ -1,4 +1,5 @@
 import { truckyFetch } from "./trucky";
+import { normalizeVtcRole } from "./vtc-roles";
 
 export interface TruckyMemberProfile {
   totalDistanceKm: number;
@@ -63,21 +64,18 @@ function readRoundedNumber(record: Record<string, unknown> | null | undefined, k
 }
 
 async function fetchDriverVtcJobCount(companyId: string, truckyUserId: number) {
-  const queries = [
-    new URLSearchParams({ page: "1", user_id: String(truckyUserId) }),
-    new URLSearchParams({ page: "1", user_id: String(truckyUserId), status: "completed" })
-  ];
+  const query = new URLSearchParams({
+    page: "1",
+    user_id: String(truckyUserId),
+    status: "completed"
+  });
 
-  for (const query of queries) {
-    const response = await truckyFetch(`/api/v1/company/${companyId}/jobs`, query);
-    if (!response.ok) continue;
+  const response = await truckyFetch(`/api/v1/company/${companyId}/jobs`, query);
+  if (!response.ok) return 0;
 
-    const body = await response.json();
-    const total = Number(body?.total);
-    if (Number.isFinite(total) && total >= 0) return total;
-  }
-
-  return 0;
+  const body = await response.json();
+  const total = Number(body?.total);
+  return Number.isFinite(total) && total >= 0 ? total : 0;
 }
 
 export function memberMatches(record: Record<string, unknown>, truckyUserId: number) {
@@ -129,16 +127,45 @@ export async function fetchCompanyMemberCount(companyId: string) {
   return firstPage;
 }
 
-export async function fetchMemberAvatarMap(companyId: string) {
-  const members = await fetchAllCompanyMembers(companyId);
-  const map = new Map<number, string>();
+export interface MemberLeaderboardMeta {
+  avatarUrl: string | null;
+  vtcRoleName: string;
+  vtcRoleColor: string;
+  lifetimeDistanceKm: number;
+}
+
+export async function fetchMemberLeaderboardMetaMap(companyId: string) {
+  const members = await getCachedCompanyMembers(companyId);
+  const map = new Map<number, MemberLeaderboardMeta>();
 
   for (const member of members) {
     const userId = Number(member.id ?? member.user_id);
-    const avatarUrl = readAvatarUrl(member);
-    if (Number.isFinite(userId) && avatarUrl) {
-      map.set(userId, avatarUrl);
-    }
+    if (!Number.isFinite(userId)) continue;
+
+    const roleRecord =
+      member.role && typeof member.role === "object"
+        ? (member.role as Record<string, unknown>)
+        : null;
+    const vtcRole = normalizeVtcRole(roleRecord);
+
+    map.set(userId, {
+      avatarUrl: readAvatarUrl(member),
+      vtcRoleName: vtcRole.name,
+      vtcRoleColor: vtcRole.color,
+      lifetimeDistanceKm: readTotalKm(member) ?? 0
+    });
+  }
+
+  return map;
+}
+
+/** @deprecated Use fetchMemberLeaderboardMetaMap */
+export async function fetchMemberAvatarMap(companyId: string) {
+  const metaMap = await fetchMemberLeaderboardMetaMap(companyId);
+  const map = new Map<number, string>();
+
+  for (const [userId, meta] of metaMap) {
+    if (meta.avatarUrl) map.set(userId, meta.avatarUrl);
   }
 
   return map;
@@ -301,7 +328,7 @@ export async function fetchDriverVtcAllTimeStats(
 
   return {
     drivenDistanceKm,
-    jobs: jobCount > 0 ? jobCount : yearlyTotals.jobs,
+    jobs: yearlyTotals.jobs > 0 ? yearlyTotals.jobs : jobCount,
     cargoMass: yearlyTotals.cargoMass,
     revenue: yearlyTotals.revenue
   };

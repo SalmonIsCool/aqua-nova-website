@@ -14,6 +14,7 @@ export const hubNav: HubNavItem[] = [
       { label: "View your jobs", href: "/hub/jobs/mine" }
     ]
   },
+  { label: "Leaderboard", href: "/hub/leaderboard" },
   { label: "Map", href: "/hub/map" },
   {
     label: "Training",

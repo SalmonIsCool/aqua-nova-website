@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import { fetchMemberAvatarMap } from "./lib/members";
+import { fetchMemberLeaderboardMetaMap } from "./lib/members";
+import { getRankProgress } from "./lib/ranks";
 import { readTruckyConfig, truckyFetch } from "./lib/trucky";
 
 interface TruckyMemberStat {
@@ -22,6 +23,8 @@ interface LeaderboardEntry {
   userId: number;
   name: string;
   avatarUrl: string | null;
+  vtcRole: { name: string; color: string };
+  driverRank: { name: string; color: string };
   drivenDistanceKm: number;
   jobs: number;
   cargoMass: number;
@@ -63,9 +66,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
   if (params.game_id) query.set("game_id", params.game_id);
 
   try {
-    const [response, avatarMap] = await Promise.all([
+    const [response, memberMeta] = await Promise.all([
       truckyFetch(`/api/v2/company/${companyId}/stats/members`, query),
-      fetchMemberAvatarMap(companyId)
+      fetchMemberLeaderboardMetaMap(companyId)
     ]);
 
     if (!response.ok) {
@@ -86,16 +89,29 @@ export const handler: Handler = async (event: HandlerEvent) => {
       return b.driven_distance - a.driven_distance;
     });
 
-    const leaderboard: LeaderboardEntry[] = sorted.map((member, index) => ({
-      rank: index + 1,
-      userId: member.user_id,
-      name: member.name,
-      avatarUrl: avatarMap.get(member.user_id) ?? null,
-      drivenDistanceKm: Math.round(member.driven_distance),
-      jobs: member.jobs,
-      cargoMass: Math.round(member.cargo_mass),
-      revenue: Math.round(member.revenue)
-    }));
+    const leaderboard: LeaderboardEntry[] = sorted.map((member, index) => {
+      const meta = memberMeta.get(member.user_id);
+      const rankProgress = getRankProgress(meta?.lifetimeDistanceKm ?? 0);
+
+      return {
+        rank: index + 1,
+        userId: member.user_id,
+        name: member.name,
+        avatarUrl: meta?.avatarUrl ?? null,
+        vtcRole: {
+          name: meta?.vtcRoleName ?? "Driver",
+          color: meta?.vtcRoleColor ?? "#64748B"
+        },
+        driverRank: {
+          name: rankProgress.currentName,
+          color: rankProgress.currentColor
+        },
+        drivenDistanceKm: Math.round(member.driven_distance),
+        jobs: member.jobs,
+        cargoMass: Math.round(member.cargo_mass),
+        revenue: Math.round(member.revenue)
+      };
+    });
 
     return jsonResponse(200, {
       period,

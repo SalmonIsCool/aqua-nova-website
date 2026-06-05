@@ -1,0 +1,56 @@
+---
+interface Props {
+  currentMonth: number;
+  currentYear: number;
+  refreshClass?: string;
+}
+
+const { currentMonth, currentYear, refreshClass = "btn-secondary self-end" } = Astro.props;
+---
+
+<div class="flex flex-wrap gap-3">
+  <label class="grid gap-1 text-sm text-slate-300">
+    Period
+    <select id="leaderboard-period" class="input-field w-auto min-w-[8rem]">
+      <option value="monthly" selected>Monthly</option>
+      <option value="weekly">Weekly</option>
+      <option value="yearly">Yearly</option>
+    </select>
+  </label>
+  <label class="grid gap-1 text-sm text-slate-300">
+    Month
+    <select id="leaderboard-month" class="input-field w-auto min-w-[8rem]">
+      {
+        Array.from({ length: 12 }, (_, index) => {
+          const month = index + 1;
+          return (
+            <option value={month} selected={month === currentMonth}>
+              {new Date(2000, index, 1).toLocaleString("en", { month: "long" })}
+            </option>
+          );
+        })
+      }
+    </select>
+  </label>
+  <label class="grid gap-1 text-sm text-slate-300">
+    Year
+    <select id="leaderboard-year" class="input-field w-auto min-w-[6rem]">
+      {
+        [currentYear - 1, currentYear, currentYear + 1].map((year) => (
+          <option value={year} selected={year === currentYear}>
+            {year}
+          </option>
+        ))
+      }
+    </select>
+  </label>
+  <label class="grid gap-1 text-sm text-slate-300">
+    Sort by
+    <select id="leaderboard-sort" class="input-field w-auto min-w-[8rem]">
+      <option value="distance" selected>Distance</option>
+      <option value="jobs">Jobs</option>
+      <option value="revenue">Revenue</option>
+    </select>
+  </label>
+  <button id="leaderboard-refresh" type="button" class={refreshClass}>Refresh</button>
+</div>

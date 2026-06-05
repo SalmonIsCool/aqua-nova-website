@@ -1,0 +1,60 @@
+---
+import HubLayout from "../../layouts/HubLayout.astro";
+import LeaderboardControls from "../../components/LeaderboardControls.astro";
+
+const now = new Date();
+const currentMonth = now.getMonth() + 1;
+const currentYear = now.getFullYear();
+---
+
+<HubLayout
+  title="Leaderboard"
+  breadcrumbs={[
+    { label: "Home", href: "/hub/" },
+    { label: "Leaderboard" }
+  ]}
+>
+  <h1 class="hub-page-title">Driver leaderboard</h1>
+  <p class="mt-2 text-slate-400">
+    Live VTC rankings with driver roles and rank progression from Trucky.
+  </p>
+
+  <div class="mt-6">
+    <LeaderboardControls
+      currentMonth={currentMonth}
+      currentYear={currentYear}
+      refreshClass="btn-primary self-end"
+    />
+  </div>
+
+  <p id="leaderboard-status" class="mt-4 text-sm text-slate-400">Loading leaderboard…</p>
+
+  <div class="hub-table-wrap mt-4">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Driver</th>
+          <th>Distance</th>
+          <th>Jobs</th>
+          <th>Revenue</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body"></tbody>
+    </table>
+  </div>
+</HubLayout>
+
+<script>
+  import { initLeaderboardPage } from "../../scripts/leaderboard-page";
+
+  initLeaderboardPage({
+    statusId: "leaderboard-status",
+    bodyId: "leaderboard-body",
+    periodId: "leaderboard-period",
+    monthId: "leaderboard-month",
+    yearId: "leaderboard-year",
+    sortId: "leaderboard-sort",
+    refreshId: "leaderboard-refresh"
+  });
+</script>
