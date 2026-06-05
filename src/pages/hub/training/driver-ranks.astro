@@ -1,20 +1,9 @@
 ---
 import HubLayout from "../../../layouts/HubLayout.astro";
+import { driverRanks } from "../../../data/driver-ranks";
 import { siteConfig } from "../../../data/site";
 
-const ranks = [
-  { name: "Grandmaster Driver", points: "1,500,000", color: "bg-rose-600" },
-  { name: "Professional Driver", points: "1,000,000", color: "bg-pink-600" },
-  { name: "Legendary Driver", points: "750,000", color: "bg-purple-600" },
-  { name: "Expert Driver", points: "500,000", color: "bg-indigo-600" },
-  { name: "Veteran Driver", points: "250,000", color: "bg-blue-600" },
-  { name: "Master Driver", points: "150,000", color: "bg-sky-600" },
-  { name: "Skilled Driver", points: "100,000", color: "bg-teal-600" },
-  { name: "Experienced Driver", points: "50,000", color: "bg-emerald-600" },
-  { name: "Licensed Driver", points: "25,000", color: "bg-green-700" },
-  { name: "Novice Driver", points: "5,000", color: "bg-lime-700" },
-  { name: "Apprentice Driver", points: "0", color: "bg-amber-700" }
-];
+const ranks = [...driverRanks].reverse();
 ---
 
 <HubLayout
@@ -28,7 +17,7 @@ const ranks = [
   <article class="hub-panel max-w-3xl">
     <h1 class="hub-page-title text-cyan-300">{siteConfig.name} Driver Ranks</h1>
     <p class="mt-4 text-slate-300">
-      Rank progression based on company points. Full rank details and perks will be added here soon.
+      Ranks are assigned automatically in Trucky based on your total distance logged from completed jobs.
     </p>
 
     <h2 class="mt-8 text-lg font-semibold text-white">Driver ranks</h2>
@@ -37,7 +26,7 @@ const ranks = [
         ranks.map((rank) => (
           <li class={`flex items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-white ${rank.color}`}>
             <span>{rank.name}</span>
-            <span>{rank.points} points</span>
+            <span>{rank.minKm === 0 ? "0 km" : `${rank.minKm.toLocaleString("en-GB")} km`}</span>
           </li>
         ))
       }
@@ -45,7 +34,7 @@ const ranks = [
 
     <h2 class="mt-8 text-lg font-semibold text-white">Staff ranks</h2>
     <p class="mt-3 text-slate-300">
-      Management and staff roles sit above the driver rank ladder. Placeholder — staff structure will be documented here.
+      Management and staff roles sit above the driver rank ladder. Staff structure will be documented here.
     </p>
   </article>
 </HubLayout>

@@ -291,6 +291,10 @@ summary:focus-visible {
   @apply text-2xl font-bold text-white sm:text-3xl;
 }
 
+.hub-stats-heading {
+  @apply text-sm font-semibold uppercase tracking-wide text-slate-400;
+}
+
 .hub-panel {
   @apply rounded-xl border border-white/10 bg-[#0c1f4f]/80 p-5 shadow-lg shadow-blue-950/30;
 }
@@ -321,6 +325,10 @@ summary:focus-visible {
 
 .hub-progress__bar {
   @apply h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-300 transition-all;
+}
+
+.hub-rank-name {
+  @apply text-lg font-bold text-white;
 }
 
 .hub-table-wrap {

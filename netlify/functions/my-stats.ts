@@ -1,5 +1,6 @@
 import type { Handler } from "@netlify/functions";
 import { authenticateHubRequest } from "./lib/auth";
+import { getRankProgress } from "./lib/ranks";
 import { truckyFetch } from "./lib/trucky";
 
 function json(statusCode: number, body: unknown) {
@@ -31,16 +32,26 @@ export const handler: Handler = async (event, context) => {
       return json(500, { error: "Trucky API is not configured on the server." });
     }
 
-    const response = await truckyFetch(`/api/v2/company/${companyId}/stats/members`, query);
-    if (!response.ok) {
-      return json(response.status, { error: "Could not load stats from Trucky." });
+    const [statsResponse, userResponse] = await Promise.all([
+      truckyFetch(`/api/v2/company/${companyId}/stats/members`, query),
+      truckyFetch(`/api/v2/user/${auth.driver.truckyUserId}`)
+    ]);
+
+    if (!statsResponse.ok) {
+      return json(statsResponse.status, { error: "Could not load stats from Trucky." });
     }
 
-    const data = await response.json();
+    const data = await statsResponse.json();
     const members = Array.isArray(data.members) ? data.members : [];
     const mine = members.find(
       (member: { user_id: number }) => Number(member.user_id) === auth.driver.truckyUserId
     );
+
+    let totalDistanceKm = 0;
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      totalDistanceKm = Math.round(Number(userData.total_driven_distance ?? 0));
+    }
 
     return json(200, {
       driver: auth.driver,
@@ -59,7 +70,8 @@ export const handler: Handler = async (event, context) => {
             jobs: 0,
             cargoMass: 0,
             revenue: 0
-          }
+          },
+      rank: getRankProgress(totalDistanceKm)
     });
   } catch {
     return json(500, { error: "Failed to load your stats." });
