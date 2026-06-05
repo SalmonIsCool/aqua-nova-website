@@ -1,6 +1,7 @@
 ---
 import HubLayout from "../../../layouts/HubLayout.astro";
 import StaffApplicationForm from "../../../components/hub/StaffApplicationForm.astro";
+import StaffRoleClosed from "../../../components/hub/StaffRoleClosed.astro";
 import { staffRoles } from "../../../data/staff-roles";
 
 const role = staffRoles.find((item) => item.slug === "recruitment")!;
@@ -18,7 +19,9 @@ const role = staffRoles.find((item) => item.slug === "recruitment")!;
   <p class="mt-2 max-w-2xl text-slate-400">{role.description}</p>
 
   <div class="mt-6 max-w-2xl">
-    <StaffApplicationForm
+    {
+      role.open ? (
+        <StaffApplicationForm
       roleTitle={role.title}
       formName={role.formName}
       applicationType={role.applicationType}
@@ -62,6 +65,10 @@ const role = staffRoles.find((item) => item.slug === "recruitment")!;
           type: "text"
         }
       ]}
-    />
+        />
+      ) : (
+        <StaffRoleClosed roleTitle={role.title} />
+      )
+    }
   </div>
 </HubLayout>

@@ -20,6 +20,7 @@ import HubLayout from "../../layouts/HubLayout.astro";
 
 <script>
   import { getAuthHeadersAsync, onIdentityReady } from "../../scripts/hub-auth";
+  import { liveFetch } from "../../scripts/live-fetch";
 
   const formatter = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
 
@@ -323,7 +324,9 @@ import HubLayout from "../../layouts/HubLayout.astro";
     }
 
     try {
-      const response = await fetch(`/api/my-job?id=${encodeURIComponent(id)}`, { headers: await getAuthHeadersAsync() });
+      const response = await liveFetch(`/api/my-job?id=${encodeURIComponent(id)}`, {
+        headers: await getAuthHeadersAsync()
+      });
       const data = await response.json();
 
       if (!response.ok) {

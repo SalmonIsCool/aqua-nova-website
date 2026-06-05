@@ -57,24 +57,38 @@ const breadcrumbs = Astro.props.breadcrumbs ?? [{ label: "Home", href: "/hub/" }
     <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
       import { getAuthHeadersAsync, onIdentityReady, setupHubRouteGuard } from "../scripts/hub-auth";
+      import { startLiveRefresh } from "../scripts/live-fetch";
 
       const requireAuth = document.body.dataset.requireAuth === "true";
       setupHubRouteGuard(requireAuth);
 
-      function setHubProfile(name: string) {
+      function setHubAvatar(element: HTMLElement | null, name: string, avatarUrl?: string | null) {
+        if (!element) return;
         const initial = name.charAt(0).toUpperCase() || "?";
+
+        if (avatarUrl) {
+          element.innerHTML = `<img src="${avatarUrl}" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer" />`;
+          return;
+        }
+
+        element.textContent = initial;
+      }
+
+      function setHubProfile(name: string, avatarUrl?: string | null) {
         document.getElementById("hub-sidebar-name")!.textContent = name;
-        document.getElementById("hub-sidebar-avatar")!.textContent = initial;
-        const topAvatar = document.getElementById("hub-topbar-avatar");
-        if (topAvatar) topAvatar.textContent = initial;
+        setHubAvatar(document.getElementById("hub-sidebar-avatar"), name, avatarUrl);
+        setHubAvatar(document.getElementById("hub-topbar-avatar"), name, avatarUrl);
       }
 
       async function loadHubProfile() {
         try {
-          const response = await fetch("/api/my-stats", { headers: await getAuthHeadersAsync() });
+          const response = await fetch(`/api/my-stats?_=${Date.now()}`, {
+            headers: await getAuthHeadersAsync(),
+            cache: "no-store"
+          });
           const data = await response.json();
           if (response.ok && data.driver?.name) {
-            setHubProfile(data.driver.name);
+            setHubProfile(data.driver.name, data.driver.avatarUrl);
             if (data.rank?.currentName) {
               const rankEl = document.getElementById("hub-sidebar-rank");
               if (rankEl) {
@@ -96,7 +110,9 @@ const breadcrumbs = Astro.props.breadcrumbs ?? [{ label: "Home", href: "/hub/" }
       }
 
       onIdentityReady((user) => {
-        if (user && requireAuth) loadHubProfile();
+        if (!user || !requireAuth) return;
+        loadHubProfile();
+        startLiveRefresh(loadHubProfile);
       });
 
       document.getElementById("hub-logout")?.addEventListener("click", () => {

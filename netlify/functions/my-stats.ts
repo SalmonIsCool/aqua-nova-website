@@ -1,8 +1,10 @@
 import type { Handler } from "@netlify/functions";
 import { authenticateHubRequest } from "./lib/auth";
-import { fetchCompanyRanks, fetchDriverTotalDistanceKm } from "./lib/driver-distance";
+import {
+  fetchDriverMonthlyStats,
+  fetchDriverTruckyProfile
+} from "./lib/members";
 import { getRankProgress } from "./lib/ranks";
-import { truckyFetch } from "./lib/trucky";
 
 function json(statusCode: number, body: unknown) {
   return {
@@ -20,12 +22,10 @@ export const handler: Handler = async (event, context) => {
   if (!auth.ok) return json(auth.statusCode, { error: auth.error });
 
   const params = event.queryStringParameters ?? {};
+  const period = params.period === "monthly" ? "monthly" : "all-time";
   const now = new Date();
-  const period = params.period ?? "monthly";
-  const month = params.month ?? String(now.getMonth() + 1);
-  const year = params.year ?? String(now.getFullYear());
-
-  const query = new URLSearchParams({ period, month, year });
+  const month = Number(params.month ?? now.getMonth() + 1);
+  const year = Number(params.year ?? now.getFullYear());
 
   try {
     const { token, companyId } = (await import("./lib/trucky")).readTruckyConfig();
@@ -33,42 +33,30 @@ export const handler: Handler = async (event, context) => {
       return json(500, { error: "Trucky API is not configured on the server." });
     }
 
-    const [statsResponse, totalDistanceKm, companyRanks] = await Promise.all([
-      truckyFetch(`/api/v2/company/${companyId}/stats/members`, query),
-      fetchDriverTotalDistanceKm(companyId, auth.driver.truckyUserId),
-      fetchCompanyRanks(companyId)
-    ]);
+    const truckyProfile = await fetchDriverTruckyProfile(companyId, auth.driver.truckyUserId);
+    const totalDistanceKm = truckyProfile.totalDistanceKm;
 
-    if (!statsResponse.ok) {
-      return json(statsResponse.status, { error: "Could not load stats from Trucky." });
-    }
-
-    const data = await statsResponse.json();
-    const members = Array.isArray(data.members) ? data.members : [];
-    const mine = members.find(
-      (member: { user_id: number }) => Number(member.user_id) === auth.driver.truckyUserId
-    );
+    const stats =
+      period === "monthly"
+        ? await fetchDriverMonthlyStats(companyId, auth.driver.truckyUserId, month, year)
+        : {
+            drivenDistanceKm: totalDistanceKm,
+            jobs: truckyProfile.totalJobs,
+            cargoMass: truckyProfile.totalCargoMass,
+            revenue: truckyProfile.totalRevenue
+          };
 
     return json(200, {
-      driver: auth.driver,
+      driver: {
+        ...auth.driver,
+        avatarUrl: truckyProfile.avatarUrl
+      },
       period,
-      month: Number(month),
-      year: Number(year),
+      month: period === "monthly" ? month : undefined,
+      year: period === "monthly" ? year : undefined,
       totalDistanceKm,
-      stats: mine
-        ? {
-            drivenDistanceKm: Math.round(mine.driven_distance),
-            jobs: mine.jobs,
-            cargoMass: Math.round(mine.cargo_mass),
-            revenue: Math.round(mine.revenue)
-          }
-        : {
-            drivenDistanceKm: 0,
-            jobs: 0,
-            cargoMass: 0,
-            revenue: 0
-          },
-      rank: getRankProgress(totalDistanceKm, companyRanks ?? undefined)
+      stats,
+      rank: getRankProgress(totalDistanceKm)
     });
   } catch {
     return json(500, { error: "Failed to load your stats." });

@@ -18,20 +18,20 @@ export const driverRanks: DriverRank[] = [
   { name: "Grandmaster Driver", minKm: 1_500_000, color: "#F44336" }
 ];
 
-export function getRankProgress(totalDistanceKm: number, ranks: DriverRank[] = driverRanks) {
+/** Same ladder as /hub/training/driver-ranks — progress is computed locally from total km. */
+export function getRankProgress(totalDistanceKm: number) {
   const totalKm = Math.max(0, Math.round(totalDistanceKm));
-  const ladder = ranks.length ? ranks : driverRanks;
 
   let currentIndex = 0;
-  for (let index = ladder.length - 1; index >= 0; index -= 1) {
-    if (totalKm >= ladder[index].minKm) {
+  for (let index = driverRanks.length - 1; index >= 0; index -= 1) {
+    if (totalKm >= driverRanks[index].minKm) {
       currentIndex = index;
       break;
     }
   }
 
-  const current = ladder[currentIndex];
-  const next = ladder[currentIndex + 1] ?? null;
+  const current = driverRanks[currentIndex];
+  const next = driverRanks[currentIndex + 1] ?? null;
 
   if (!next) {
     return {

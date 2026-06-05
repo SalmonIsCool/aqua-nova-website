@@ -13,7 +13,7 @@ export const staffRoles: StaffRole[] = [
     title: "Human Resources",
     description:
       "The moderators of our Discord. They oversee driver activity and reports. You will help with driver problems, activity and behaviour, and help guard our Discord server as a moderator.",
-    open: true,
+    open: false,
     formName: "staff-human-resources",
     applicationType: "Human Resources — Staff Application"
   },
@@ -22,7 +22,7 @@ export const staffRoles: StaffRole[] = [
     title: "Media Team",
     description:
       "Creates pictures, branding, banners, and Aqua Nova Transport media for public distribution. You will help with our branding, advertisements, and social media presence.",
-    open: true,
+    open: false,
     formName: "staff-media",
     applicationType: "Media Team — Staff Application"
   },
@@ -31,7 +31,7 @@ export const staffRoles: StaffRole[] = [
     title: "Recruitment Team",
     description:
       "Recruits new drivers by reading and reviewing applications. You will help welcome applicants, review join requests, and support drivers through the onboarding process.",
-    open: true,
+    open: false,
     formName: "staff-recruitment",
     applicationType: "Recruitment Team — Staff Application"
   },
@@ -40,7 +40,7 @@ export const staffRoles: StaffRole[] = [
     title: "Public Relations Team",
     description:
       "Responsible for maintaining our social media platforms and public image. You will help represent Aqua Nova Transport online and keep our community informed.",
-    open: true,
+    open: false,
     formName: "staff-public-relations",
     applicationType: "Public Relations Team — Staff Application"
   }

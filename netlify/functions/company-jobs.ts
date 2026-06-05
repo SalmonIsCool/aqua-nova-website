@@ -41,33 +41,39 @@ export const handler: Handler = async (event, context) => {
     const data = await response.json();
     const jobs = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
 
-    const simplified = jobs.map(
-      (job: {
-        id: number;
-        status: string;
-        source_city_name?: string;
-        destination_city_name?: string;
-        created_at?: string;
-        completed_at?: string;
-        driven_distance_km?: number;
-        planned_distance_km?: number;
-        vehicle_damage?: number;
-        income?: number;
-        revenue?: number;
-        driver?: { name?: string };
-        user?: { name?: string };
-      }) => ({
-        id: job.id,
-        status: job.status,
-        driver: job.driver?.name ?? job.user?.name ?? "Unknown",
-        from: job.source_city_name ?? "Unknown",
-        to: job.destination_city_name ?? "Unknown",
-        date: job.completed_at ?? job.created_at ?? null,
-        distance: Math.round(job.driven_distance_km ?? job.planned_distance_km ?? 0),
-        damage: Math.round(Number(job.vehicle_damage ?? 0)),
-        income: Math.round(Number(job.income ?? job.revenue ?? 0))
-      })
-    );
+    const simplified = jobs
+      .map(
+        (job: {
+          id: number;
+          status: string;
+          source_city_name?: string;
+          destination_city_name?: string;
+          created_at?: string;
+          completed_at?: string;
+          driven_distance_km?: number;
+          planned_distance_km?: number;
+          vehicle_damage?: number;
+          income?: number;
+          revenue?: number;
+          driver?: { name?: string };
+          user?: { name?: string };
+        }) => ({
+          id: job.id,
+          status: job.status,
+          driver: job.driver?.name ?? job.user?.name ?? "Unknown",
+          from: job.source_city_name ?? "Unknown",
+          to: job.destination_city_name ?? "Unknown",
+          date: job.completed_at ?? job.created_at ?? null,
+          distance: Math.round(job.driven_distance_km ?? job.planned_distance_km ?? 0),
+          damage: Math.round(Number(job.vehicle_damage ?? 0)),
+          income: Math.round(Number(job.income ?? job.revenue ?? 0))
+        })
+      )
+      .sort((a, b) => {
+        const aTime = a.date ? new Date(a.date).getTime() : 0;
+        const bTime = b.date ? new Date(b.date).getTime() : 0;
+        return bTime - aTime;
+      });
 
     return json(200, {
       page: Number(page),

@@ -81,6 +81,8 @@ const currentYear = now.getFullYear();
 </BaseLayout>
 
 <script>
+  import { liveFetch, startLiveRefresh } from "../scripts/live-fetch";
+
   const statusEl = document.getElementById("status");
   const bodyEl = document.getElementById("leaderboard-body");
   const periodEl = document.getElementById("period") as HTMLSelectElement;
@@ -113,7 +115,7 @@ const currentYear = now.getFullYear();
     });
 
     try {
-      const response = await fetch(`/api/leaderboard?${query.toString()}`);
+      const response = await liveFetch(`/api/leaderboard?${query.toString()}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -130,24 +132,34 @@ const currentYear = now.getFullYear();
         return;
       }
 
-      statusEl.textContent = `Showing ${drivers.length} drivers — ${data.period} ${data.month}/${data.year}`;
+      const updatedAt = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString() : "just now";
+      statusEl.textContent = `Showing ${drivers.length} drivers — ${data.period} ${data.month}/${data.year} · Updated ${updatedAt}`;
 
       bodyEl.innerHTML = drivers
         .map(
           (driver: {
             rank: number;
             name: string;
+            avatarUrl?: string | null;
             drivenDistanceKm: number;
             jobs: number;
             revenue: number;
-          }) => `
+          }) => {
+            const avatar = driver.avatarUrl
+              ? `<img src="${driver.avatarUrl}" alt="" width="32" height="32" class="h-8 w-8 rounded-full object-cover bg-slate-800" loading="lazy" referrerpolicy="no-referrer" />`
+              : `<span class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/20 text-xs font-bold text-cyan-200">${driver.name.charAt(0).toUpperCase()}</span>`;
+
+            return `
           <tr class="hover:bg-white/5">
             <td class="px-4 py-3 font-semibold text-cyan-300">#${driver.rank}</td>
-            <td class="px-4 py-3 font-medium text-white">${driver.name}</td>
+            <td class="px-4 py-3 font-medium text-white">
+              <span class="inline-flex items-center gap-3">${avatar}<span>${driver.name}</span></span>
+            </td>
             <td class="px-4 py-3 text-slate-200">${formatDistance(driver.drivenDistanceKm)}</td>
             <td class="px-4 py-3 text-slate-200">${formatter.format(driver.jobs)}</td>
             <td class="px-4 py-3 text-slate-200">${formatRevenue(driver.revenue)}</td>
-          </tr>`
+          </tr>`;
+          }
         )
         .join("");
     } catch {
@@ -162,4 +174,5 @@ const currentYear = now.getFullYear();
   sortEl?.addEventListener("change", loadLeaderboard);
 
   loadLeaderboard();
+  startLiveRefresh(loadLeaderboard);
 </script>

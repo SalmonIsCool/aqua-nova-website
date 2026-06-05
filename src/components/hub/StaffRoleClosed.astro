@@ -1,0 +1,17 @@
+---
+interface Props {
+  roleTitle: string;
+}
+
+const { roleTitle } = Astro.props;
+---
+
+<article class="hub-panel mt-6 max-w-2xl">
+  <p class="text-slate-300">
+    Applications for <strong class="text-white">{roleTitle}</strong> are currently closed. Check back later or speak
+    with management if you have questions.
+  </p>
+  <div class="mt-6 flex justify-end">
+    <span class="hub-badge-closed" aria-disabled="true">Closed</span>
+  </div>
+</article>

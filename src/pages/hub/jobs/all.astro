@@ -53,6 +53,7 @@ import HubLayout from "../../../layouts/HubLayout.astro";
 
 <script>
   import { getAuthHeadersAsync, onIdentityReady } from "../../../scripts/hub-auth";
+  import { liveFetch, startLiveRefresh } from "../../../scripts/live-fetch";
 
   const formatter = new Intl.NumberFormat("en-GB");
   let allJobs: Array<Record<string, unknown>> = [];
@@ -111,7 +112,9 @@ import HubLayout from "../../../layouts/HubLayout.astro";
     if (statusEl) statusEl.textContent = "Loading jobs…";
 
     try {
-      const response = await fetch("/api/company-jobs?page=1", { headers: await getAuthHeadersAsync() });
+      const response = await liveFetch("/api/company-jobs?page=1", {
+        headers: await getAuthHeadersAsync()
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -126,12 +129,14 @@ import HubLayout from "../../../layouts/HubLayout.astro";
     }
   }
 
-  document.getElementById("jobs-refresh")?.addEventListener("click", filterJobs);
+  document.getElementById("jobs-refresh")?.addEventListener("click", loadJobs);
   document.getElementById("search-query")?.addEventListener("keydown", (event) => {
     if (event.key === "Enter") filterJobs();
   });
 
   onIdentityReady((user) => {
-    if (user) loadJobs();
+    if (!user) return;
+    loadJobs();
+    startLiveRefresh(loadJobs);
   });
 </script>

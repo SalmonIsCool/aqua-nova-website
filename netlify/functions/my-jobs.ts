@@ -42,22 +42,29 @@ export const handler: Handler = async (event, context) => {
     const data = await response.json();
     const jobs = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
 
-    const simplified = jobs.map(
-      (job: {
-        id: number;
-        status: string;
-        source_city_name?: string;
-        destination_city_name?: string;
-        created_at?: string;
-        driver?: { name?: string };
-      }) => ({
-        id: job.id,
-        status: job.status,
-        from: job.source_city_name ?? "Unknown",
-        to: job.destination_city_name ?? "Unknown",
-        date: job.created_at ?? null
-      })
-    );
+    const simplified = jobs
+      .map(
+        (job: {
+          id: number;
+          status: string;
+          source_city_name?: string;
+          destination_city_name?: string;
+          created_at?: string;
+          completed_at?: string;
+          driver?: { name?: string };
+        }) => ({
+          id: job.id,
+          status: job.status,
+          from: job.source_city_name ?? "Unknown",
+          to: job.destination_city_name ?? "Unknown",
+          date: job.completed_at ?? job.created_at ?? null
+        })
+      )
+      .sort((a, b) => {
+        const aTime = a.date ? new Date(a.date).getTime() : 0;
+        const bTime = b.date ? new Date(b.date).getTime() : 0;
+        return bTime - aTime;
+      });
 
     return json(200, {
       driver: auth.driver,

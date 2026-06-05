@@ -1,7 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-
-const TRUCKY_BASE = "https://e.truckyapp.com";
-const USER_AGENT = "Aqua Nova Transport Website";
+import { fetchMemberAvatarMap } from "./lib/members";
+import { readTruckyConfig, truckyFetch } from "./lib/trucky";
 
 interface TruckyMemberStat {
   user_id: number;
@@ -20,50 +19,34 @@ interface TruckyMemberStatsResponse {
 
 interface LeaderboardEntry {
   rank: number;
+  userId: number;
   name: string;
+  avatarUrl: string | null;
   drivenDistanceKm: number;
   jobs: number;
   cargoMass: number;
   revenue: number;
 }
 
-function jsonResponse(statusCode: number, body: unknown, cacheSeconds = 300) {
+function jsonResponse(statusCode: number, body: unknown) {
   return {
     statusCode,
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": `public, max-age=${cacheSeconds}`,
+      "Cache-Control": "no-store, no-cache, must-revalidate",
       "Access-Control-Allow-Origin": "*"
     },
     body: JSON.stringify(body)
   };
 }
 
-function readEnv(...keys: string[]) {
-  for (const key of keys) {
-    const value = process.env[key]?.trim();
-    if (value) return value;
-  }
-  return undefined;
-}
-
 export const handler: Handler = async (event: HandlerEvent) => {
-  const token = readEnv(
-    "TRUCKY_ACCESS_TOKEN",
-    "TRUCKY_TOKEN",
-    "TRUCKY_API_TOKEN",
-    "TRUCKY_COMPANY_ACCESS_TOKEN"
-  );
-  const companyId = readEnv("TRUCKY_COMPANY_ID", "TRUCKY_COMPANY");
+  const { token, companyId } = readTruckyConfig();
 
-  const missing: string[] = [];
-  if (!token) missing.push("TRUCKY_ACCESS_TOKEN");
-  if (!companyId) missing.push("TRUCKY_COMPANY_ID");
-
-  if (missing.length > 0) {
+  if (!token || !companyId) {
     return jsonResponse(500, {
       error: "Trucky API is not configured.",
-      missing,
+      missing: ["TRUCKY_ACCESS_TOKEN", "TRUCKY_COMPANY_ID"],
       hint:
         "In Netlify go to Site configuration → Environment variables. Add the missing variables and enable the Functions scope, then redeploy."
     });
@@ -76,28 +59,14 @@ export const handler: Handler = async (event: HandlerEvent) => {
   const year = params.year ?? String(now.getFullYear());
   const sortBy = params.sort ?? "distance";
 
-  const query = new URLSearchParams({
-    period,
-    month,
-    year
-  });
-
-  if (params.game_id) {
-    query.set("game_id", params.game_id);
-  }
+  const query = new URLSearchParams({ period, month, year });
+  if (params.game_id) query.set("game_id", params.game_id);
 
   try {
-    const response = await fetch(
-      `${TRUCKY_BASE}/api/v2/company/${companyId}/stats/members?${query.toString()}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "User-Agent": USER_AGENT,
-          "x-access-token": token
-        }
-      }
-    );
+    const [response, avatarMap] = await Promise.all([
+      truckyFetch(`/api/v2/company/${companyId}/stats/members`, query),
+      fetchMemberAvatarMap(companyId)
+    ]);
 
     if (!response.ok) {
       const detail = await response.text();
@@ -119,7 +88,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     const leaderboard: LeaderboardEntry[] = sorted.map((member, index) => ({
       rank: index + 1,
+      userId: member.user_id,
       name: member.name,
+      avatarUrl: avatarMap.get(member.user_id) ?? null,
       drivenDistanceKm: Math.round(member.driven_distance),
       jobs: member.jobs,
       cargoMass: Math.round(member.cargo_mass),
