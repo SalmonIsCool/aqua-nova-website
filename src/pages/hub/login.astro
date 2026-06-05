@@ -37,14 +37,6 @@ import { siteConfig } from "../../data/site";
 </HubLayout>
 
 <script>
-  import { onIdentityReady } from "../../scripts/hub-auth";
-
-  onIdentityReady((user) => {
-    if (user) {
-      window.location.replace("/hub/");
-    }
-  });
-
   document.getElementById("hub-login-btn")?.addEventListener("click", () => {
     window.netlifyIdentity?.open("login");
   });

@@ -1,3 +1,57 @@
+type IdentityCallback = (user: NetlifyIdentityUser | null) => void;
+
+let identityAttached = false;
+let identityInitialized = false;
+const readyCallbacks: IdentityCallback[] = [];
+
+function notifyIdentityReady(user: NetlifyIdentityUser | null) {
+  readyCallbacks.forEach((callback) => callback(user));
+}
+
+function attachIdentityOnce() {
+  if (identityAttached) return !!window.netlifyIdentity;
+
+  const identity = window.netlifyIdentity;
+  if (!identity) return false;
+
+  identityAttached = true;
+
+  identity.on("init", () => {
+    identityInitialized = true;
+    notifyIdentityReady(identity.currentUser() ?? null);
+  });
+
+  identity.on("login", () => {
+    notifyIdentityReady(identity.currentUser() ?? null);
+  });
+
+  identity.on("logout", () => {
+    notifyIdentityReady(null);
+  });
+
+  return true;
+}
+
+function waitForIdentityWidget() {
+  if (attachIdentityOnce()) return;
+
+  const started = Date.now();
+  const timer = window.setInterval(() => {
+    if (attachIdentityOnce()) {
+      window.clearInterval(timer);
+      return;
+    }
+
+    if (Date.now() - started > 15_000) {
+      window.clearInterval(timer);
+      identityInitialized = true;
+      notifyIdentityReady(null);
+    }
+  }, 50);
+}
+
+waitForIdentityWidget();
+
 export function getIdentityUser() {
   return window.netlifyIdentity?.currentUser() ?? null;
 }
@@ -8,55 +62,33 @@ export function getAuthHeaders() {
   return { Authorization: `Bearer ${user.token.access_token}` };
 }
 
-function attachIdentityListeners(callback: (user: NetlifyIdentityUser | null) => void) {
-  const identity = window.netlifyIdentity;
-  if (!identity) return false;
+export function onIdentityReady(callback: IdentityCallback) {
+  readyCallbacks.push(callback);
 
-  const run = () => callback(identity.currentUser() ?? null);
-
-  identity.on("init", run);
-  identity.on("login", run);
-  identity.on("logout", () => callback(null));
-
-  if (identity.currentUser()) {
-    run();
-  } else {
-    run();
+  if (identityInitialized) {
+    callback(getIdentityUser());
   }
-
-  return true;
-}
-
-export function onIdentityReady(callback: (user: NetlifyIdentityUser | null) => void) {
-  if (attachIdentityListeners(callback)) return;
-
-  const started = Date.now();
-  const timer = window.setInterval(() => {
-    if (attachIdentityListeners(callback)) {
-      window.clearInterval(timer);
-      return;
-    }
-
-    if (Date.now() - started > 10_000) {
-      window.clearInterval(timer);
-      callback(null);
-    }
-  }, 100);
 }
 
 export function setupHubRouteGuard(requireAuth: boolean) {
+  let handled = false;
+
   const isLoginPage = () => {
     const path = window.location.pathname;
     return path === "/hub/login" || path === "/hub/login/";
   };
 
   onIdentityReady((user) => {
+    if (handled) return;
+
     if (requireAuth && !user && !isLoginPage()) {
+      handled = true;
       window.location.replace("/hub/login");
       return;
     }
 
     if (user && isLoginPage()) {
+      handled = true;
       window.location.replace("/hub/");
     }
   });
