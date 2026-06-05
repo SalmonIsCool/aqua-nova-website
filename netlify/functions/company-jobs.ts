@@ -35,7 +35,11 @@ export const handler: Handler = async (event, context) => {
 
     const response = await truckyFetch(`/api/v1/company/${companyId}/jobs`, query);
     if (!response.ok) {
-      return json(response.status, { error: "Could not load company jobs from Trucky." });
+      const message =
+        response.status === 429
+          ? "Trucky is temporarily rate-limiting requests. Wait a few seconds and refresh."
+          : "Could not load company jobs from Trucky.";
+      return json(response.status, { error: message, status: response.status });
     }
 
     const data = await response.json();

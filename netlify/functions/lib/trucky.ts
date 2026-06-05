@@ -12,7 +12,29 @@ export function readTruckyConfig() {
   return { token, companyId };
 }
 
-export async function truckyFetch(path: string, searchParams?: URLSearchParams) {
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function retryDelayMs(response: Response) {
+  const header = response.headers.get("retry-after");
+  if (header) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+  }
+
+  try {
+    const body = (await response.clone().json()) as { retry_after?: number };
+    const seconds = Number(body.retry_after);
+    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+  } catch {
+    /* ignore */
+  }
+
+  return 2000;
+}
+
+export async function truckyFetch(path: string, searchParams?: URLSearchParams, attempt = 0) {
   const { token, companyId } = readTruckyConfig();
   if (!token || !companyId) {
     throw new Error("TRUCKY_NOT_CONFIGURED");
@@ -29,6 +51,11 @@ export async function truckyFetch(path: string, searchParams?: URLSearchParams) 
       "x-access-token": token
     }
   });
+
+  if (response.status === 429 && attempt < 3) {
+    await sleep(await retryDelayMs(response));
+    return truckyFetch(path, searchParams, attempt + 1);
+  }
 
   return response;
 }

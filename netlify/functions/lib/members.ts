@@ -145,6 +145,26 @@ export async function fetchMemberAvatarMap(companyId: string) {
 }
 
 const VTC_STATS_START_YEAR = 2025;
+const MEMBERS_CACHE_MS = 60_000;
+
+let membersCache: {
+  companyId: string;
+  members: Record<string, unknown>[];
+  fetchedAt: number;
+} | null = null;
+
+async function getCachedCompanyMembers(companyId: string) {
+  if (
+    membersCache?.companyId === companyId &&
+    Date.now() - membersCache.fetchedAt < MEMBERS_CACHE_MS
+  ) {
+    return membersCache.members;
+  }
+
+  const members = await fetchAllCompanyMembers(companyId);
+  membersCache = { companyId, members, fetchedAt: Date.now() };
+  return members;
+}
 
 async function fetchUserRecord(truckyUserId: number) {
   const userPaths = [`/api/v2/user/${truckyUserId}`, `/api/v1/user/${truckyUserId}`];
@@ -163,7 +183,7 @@ async function fetchUserRecord(truckyUserId: number) {
 
 export async function fetchDriverHubProfile(companyId: string, truckyUserId: number) {
   const [members, userRecord] = await Promise.all([
-    fetchAllCompanyMembers(companyId),
+    getCachedCompanyMembers(companyId),
     fetchUserRecord(truckyUserId)
   ]);
 
@@ -201,30 +221,39 @@ function findMemberPeriodStats(
 
 async function fetchDriverVtcLifetimeKmFromMonthlySum(companyId: string, truckyUserId: number) {
   const now = new Date();
-  const tasks: Promise<DriverPeriodStats>[] = [];
+  let total = 0;
 
   for (let year = VTC_STATS_START_YEAR; year <= now.getFullYear(); year += 1) {
     const endMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
     for (let month = 1; month <= endMonth; month += 1) {
-      tasks.push(fetchDriverMonthlyStats(companyId, truckyUserId, month, year));
+      const stats = await fetchDriverMonthlyStats(companyId, truckyUserId, month, year);
+      total += stats.drivenDistanceKm;
     }
   }
 
-  const results = await Promise.all(tasks);
-  return results.reduce((sum, stats) => sum + stats.drivenDistanceKm, 0);
+  return total;
 }
 
-/** VTC all-time km for rank progress — matched against the driver rank ladder. */
-export async function fetchDriverVtcLifetimeKm(companyId: string, truckyUserId: number) {
-  const members = await fetchAllCompanyMembers(companyId);
+async function resolveDriverVtcLifetimeKm(
+  companyId: string,
+  truckyUserId: number,
+  members: Record<string, unknown>[],
+  yearlyTotals?: DriverPeriodStats
+) {
   const member = members.find((record) => memberMatches(record, truckyUserId));
   const fromMember = readTotalKm(member);
   if (fromMember !== null && fromMember > 0) return fromMember;
 
-  const yearly = await fetchDriverVtcYearlyTotals(companyId, truckyUserId);
+  const yearly = yearlyTotals ?? (await fetchDriverVtcYearlyTotals(companyId, truckyUserId));
   if (yearly.drivenDistanceKm > 0) return yearly.drivenDistanceKm;
 
   return fetchDriverVtcLifetimeKmFromMonthlySum(companyId, truckyUserId);
+}
+
+/** VTC all-time km for rank progress — matched against the driver rank ladder. */
+export async function fetchDriverVtcLifetimeKm(companyId: string, truckyUserId: number) {
+  const members = await getCachedCompanyMembers(companyId);
+  return resolveDriverVtcLifetimeKm(companyId, truckyUserId, members);
 }
 
 async function fetchDriverVtcYearlyTotals(companyId: string, truckyUserId: number) {
@@ -260,14 +289,18 @@ export async function fetchDriverVtcAllTimeStats(
   companyId: string,
   truckyUserId: number
 ): Promise<DriverPeriodStats> {
-  const [jobCount, yearlyTotals, lifetimeKm] = await Promise.all([
-    fetchDriverVtcJobCount(companyId, truckyUserId),
-    fetchDriverVtcYearlyTotals(companyId, truckyUserId),
-    fetchDriverVtcLifetimeKm(companyId, truckyUserId)
-  ]);
+  const members = await getCachedCompanyMembers(companyId);
+  const yearlyTotals = await fetchDriverVtcYearlyTotals(companyId, truckyUserId);
+  const drivenDistanceKm = await resolveDriverVtcLifetimeKm(
+    companyId,
+    truckyUserId,
+    members,
+    yearlyTotals
+  );
+  const jobCount = await fetchDriverVtcJobCount(companyId, truckyUserId);
 
   return {
-    drivenDistanceKm: lifetimeKm,
+    drivenDistanceKm,
     jobs: jobCount > 0 ? jobCount : yearlyTotals.jobs,
     cargoMass: yearlyTotals.cargoMass,
     revenue: yearlyTotals.revenue
@@ -297,7 +330,7 @@ export async function fetchDriverTruckyProfile(
 export async function fetchCompanyAllTimeStats(companyId: string): Promise<CompanyAllTimeTotals> {
   const [allTimeResponse, members, aggregatedResponse] = await Promise.all([
     truckyFetch(`/api/v1/company/${companyId}/stats`),
-    fetchAllCompanyMembers(companyId),
+    getCachedCompanyMembers(companyId),
     truckyFetch(`/api/v1/company/${companyId}/stats/aggregated`)
   ]);
 

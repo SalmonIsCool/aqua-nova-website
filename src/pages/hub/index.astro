@@ -319,10 +319,16 @@ const upcomingEvent = events[0] ?? null;
 
   function showDashboardError(message: string) {
     const statusEl = document.getElementById("hub-dashboard-status");
-    if (statusEl) {
-      statusEl.textContent = message;
-      statusEl.classList.remove("hidden");
+    if (!statusEl) return;
+
+    if (!message) {
+      statusEl.textContent = "";
+      statusEl.classList.add("hidden");
+      return;
     }
+
+    statusEl.textContent = message;
+    statusEl.classList.remove("hidden");
   }
 
   let companyPeriod = "all-time";
@@ -354,6 +360,10 @@ const upcomingEvent = events[0] ?? null;
         loadDashboard();
       });
     });
+  }
+
+  function pause(ms: number) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
   }
 
   async function loadDashboard() {
@@ -394,6 +404,8 @@ const upcomingEvent = events[0] ?? null;
         errors.push(companyData.error ?? "Could not load company stats.");
       }
 
+      await pause(400);
+
       const authHeaders = await getAuthHeadersAsync();
       const statsRes = await liveFetch(`/api/my-stats?period=${personalPeriod}`, { headers: authHeaders });
       const statsData = await statsRes.json();
@@ -419,6 +431,8 @@ const upcomingEvent = events[0] ?? null;
         errors.push(statsData.error ?? "Could not load your stats.");
         if (greetingEl) greetingEl.textContent = `${greeting()}, driver`;
       }
+
+      await pause(400);
 
       const jobsRes = await liveFetch("/api/company-jobs?page=1", { headers: authHeaders });
       const jobsData = await jobsRes.json();
@@ -446,7 +460,11 @@ const upcomingEvent = events[0] ?? null;
         if (!jobsRes.ok) errors.push(jobsData.error ?? "Could not load recent jobs.");
       }
 
-      if (errors.length) showDashboardError([...new Set(errors)].join(" "));
+      if (errors.length) {
+        showDashboardError([...new Set(errors)].join(" "));
+      } else {
+        showDashboardError("");
+      }
     } catch {
       showDashboardError("Could not reach the hub API. Try refreshing the page.");
       if (activityEl) activityEl.innerHTML = `<li class="text-sm text-rose-300">Could not load dashboard data.</li>`;

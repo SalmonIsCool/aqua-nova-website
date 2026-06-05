@@ -3,8 +3,7 @@ import { authenticateHubRequest } from "./lib/auth";
 import {
   fetchDriverHubProfile,
   fetchDriverMonthlyStats,
-  fetchDriverVtcAllTimeStats,
-  fetchDriverVtcLifetimeKm
+  fetchDriverVtcAllTimeStats
 } from "./lib/members";
 import { getRankProgress } from "./lib/ranks";
 
@@ -37,16 +36,16 @@ export const handler: Handler = async (event, context) => {
 
     const truckyUserId = auth.driver.truckyUserId;
 
-    const [hubProfile, vtcAllTime, rankKm, monthlyStats] = await Promise.all([
+    const vtcAllTime = await fetchDriverVtcAllTimeStats(companyId, truckyUserId);
+    const [hubProfile, monthlyStats] = await Promise.all([
       fetchDriverHubProfile(companyId, truckyUserId),
-      fetchDriverVtcAllTimeStats(companyId, truckyUserId),
-      fetchDriverVtcLifetimeKm(companyId, truckyUserId),
       period === "monthly"
         ? fetchDriverMonthlyStats(companyId, truckyUserId, month, year)
         : Promise.resolve(null)
     ]);
 
     const stats = period === "monthly" ? monthlyStats! : vtcAllTime;
+    const rankKm = vtcAllTime.drivenDistanceKm;
     const rank = getRankProgress(rankKm);
 
     return json(200, {
