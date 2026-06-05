@@ -165,7 +165,7 @@ const upcomingEvent = events[0] ?? null;
 </HubLayout>
 
 <script>
-  import { getAuthHeaders, onIdentityReady } from "../../scripts/hub-auth";
+  import { getAuthHeadersAsync, onIdentityReady } from "../../scripts/hub-auth";
 
   const formatter = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
   const fullFormatter = new Intl.NumberFormat("en-GB");
@@ -295,7 +295,8 @@ const upcomingEvent = events[0] ?? null;
         errors.push(leaderboardData.error ?? "Could not load company stats.");
       }
 
-      const statsRes = await fetch("/api/my-stats", { headers: getAuthHeaders() });
+      const authHeaders = await getAuthHeadersAsync();
+      const statsRes = await fetch("/api/my-stats", { headers: authHeaders });
       const statsData = await statsRes.json();
 
       if (statsRes.ok) {
@@ -319,7 +320,7 @@ const upcomingEvent = events[0] ?? null;
         if (greetingEl) greetingEl.textContent = `${greeting()}, driver`;
       }
 
-      const jobsRes = await fetch("/api/company-jobs?page=1", { headers: getAuthHeaders() });
+      const jobsRes = await fetch("/api/company-jobs?page=1", { headers: authHeaders });
       const jobsData = await jobsRes.json();
 
       if (jobsRes.ok && activityEl) {
@@ -345,7 +346,7 @@ const upcomingEvent = events[0] ?? null;
         if (!jobsRes.ok) errors.push(jobsData.error ?? "Could not load recent jobs.");
       }
 
-      if (errors.length) showDashboardError(errors.join(" "));
+      if (errors.length) showDashboardError([...new Set(errors)].join(" "));
     } catch {
       showDashboardError("Could not reach the hub API. Try refreshing the page.");
       if (activityEl) activityEl.innerHTML = `<li class="text-sm text-rose-300">Could not load dashboard data.</li>`;

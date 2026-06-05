@@ -56,7 +56,7 @@ const breadcrumbs = Astro.props.breadcrumbs ?? [{ label: "Home", href: "/hub/" }
 
     <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
-      import { getAuthHeaders, onIdentityReady, setupHubRouteGuard } from "../scripts/hub-auth";
+      import { getAuthHeadersAsync, onIdentityReady, setupHubRouteGuard } from "../scripts/hub-auth";
 
       const requireAuth = document.body.dataset.requireAuth === "true";
       setupHubRouteGuard(requireAuth);
@@ -71,7 +71,7 @@ const breadcrumbs = Astro.props.breadcrumbs ?? [{ label: "Home", href: "/hub/" }
 
       async function loadHubProfile() {
         try {
-          const response = await fetch("/api/my-stats", { headers: getAuthHeaders() });
+          const response = await fetch("/api/my-stats", { headers: await getAuthHeadersAsync() });
           const data = await response.json();
           if (response.ok && data.driver?.name) {
             setHubProfile(data.driver.name);

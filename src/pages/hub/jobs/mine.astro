@@ -43,7 +43,7 @@ import HubLayout from "../../../layouts/HubLayout.astro";
 </HubLayout>
 
 <script>
-  import { getAuthHeaders, onIdentityReady } from "../../../scripts/hub-auth";
+  import { getAuthHeadersAsync, onIdentityReady } from "../../../scripts/hub-auth";
 
   async function loadJobs() {
     const statusEl = document.getElementById("jobs-status");
@@ -58,7 +58,7 @@ import HubLayout from "../../../layouts/HubLayout.astro";
     if (statusFilter) query.set("status", statusFilter);
 
     try {
-      const response = await fetch(`/api/my-jobs?${query.toString()}`, { headers: getAuthHeaders() });
+      const response = await fetch(`/api/my-jobs?${query.toString()}`, { headers: await getAuthHeadersAsync() });
       const data = await response.json();
 
       if (!response.ok) {

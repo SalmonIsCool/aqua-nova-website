@@ -14,7 +14,7 @@ function json(statusCode: number, body: unknown) {
 }
 
 export const handler: Handler = async (event, context) => {
-  const auth = await authenticateHubRequest(context);
+  const auth = await authenticateHubRequest(context, event.headers);
   if (!auth.ok) return json(auth.statusCode, { error: auth.error });
 
   const params = event.queryStringParameters ?? {};

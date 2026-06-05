@@ -8,6 +8,14 @@ function notifyIdentityReady(user: NetlifyIdentityUser | null) {
   readyCallbacks.forEach((callback) => callback(user));
 }
 
+function syncIdentityState() {
+  const identity = window.netlifyIdentity;
+  if (!identity) return;
+
+  identityInitialized = true;
+  notifyIdentityReady(identity.currentUser() ?? null);
+}
+
 function attachIdentityOnce() {
   if (identityAttached) return !!window.netlifyIdentity;
 
@@ -16,18 +24,17 @@ function attachIdentityOnce() {
 
   identityAttached = true;
 
-  identity.on("init", () => {
-    identityInitialized = true;
-    notifyIdentityReady(identity.currentUser() ?? null);
-  });
-
-  identity.on("login", () => {
-    notifyIdentityReady(identity.currentUser() ?? null);
-  });
-
+  identity.on("init", syncIdentityState);
+  identity.on("login", syncIdentityState);
   identity.on("logout", () => {
+    identityInitialized = true;
     notifyIdentityReady(null);
   });
+
+  // init may have fired before this module subscribed
+  if (identity.currentUser()) {
+    syncIdentityState();
+  }
 
   return true;
 }
@@ -56,10 +63,33 @@ export function getIdentityUser() {
   return window.netlifyIdentity?.currentUser() ?? null;
 }
 
+async function resolveAccessToken(user: NetlifyIdentityUser) {
+  if (typeof user.jwt === "function") {
+    try {
+      const token = await user.jwt();
+      if (token) return token;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  return user.token?.access_token ?? null;
+}
+
 export function getAuthHeaders() {
   const user = getIdentityUser();
-  if (!user) return {};
+  if (!user?.token?.access_token) return {};
   return { Authorization: `Bearer ${user.token.access_token}` };
+}
+
+export async function getAuthHeadersAsync() {
+  const user = getIdentityUser();
+  if (!user) return {};
+
+  const token = await resolveAccessToken(user);
+  if (!token) return {};
+
+  return { Authorization: `Bearer ${token}` };
 }
 
 export function onIdentityReady(callback: IdentityCallback) {
@@ -96,7 +126,8 @@ export function setupHubRouteGuard(requireAuth: boolean) {
 
 interface NetlifyIdentityUser {
   email: string;
-  token: { access_token: string };
+  token?: { access_token?: string };
+  jwt?: (forceRefresh?: boolean) => Promise<string>;
   user_metadata?: { full_name?: string };
 }
 

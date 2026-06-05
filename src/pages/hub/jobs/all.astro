@@ -52,7 +52,7 @@ import HubLayout from "../../../layouts/HubLayout.astro";
 </HubLayout>
 
 <script>
-  import { getAuthHeaders, onIdentityReady } from "../../../scripts/hub-auth";
+  import { getAuthHeadersAsync, onIdentityReady } from "../../../scripts/hub-auth";
 
   const formatter = new Intl.NumberFormat("en-GB");
   let allJobs: Array<Record<string, unknown>> = [];
@@ -111,7 +111,7 @@ import HubLayout from "../../../layouts/HubLayout.astro";
     if (statusEl) statusEl.textContent = "Loading jobs…";
 
     try {
-      const response = await fetch("/api/company-jobs?page=1", { headers: getAuthHeaders() });
+      const response = await fetch("/api/company-jobs?page=1", { headers: await getAuthHeadersAsync() });
       const data = await response.json();
 
       if (!response.ok) {
