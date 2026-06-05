@@ -8,21 +8,40 @@ export function getAuthHeaders() {
   return { Authorization: `Bearer ${user.token.access_token}` };
 }
 
-export function onIdentityReady(callback: (user: NetlifyIdentityUser | null) => void) {
-  if (!window.netlifyIdentity) {
-    callback(null);
-    return;
-  }
+function attachIdentityListeners(callback: (user: NetlifyIdentityUser | null) => void) {
+  const identity = window.netlifyIdentity;
+  if (!identity) return false;
 
-  const run = () => callback(window.netlifyIdentity?.currentUser() ?? null);
+  const run = () => callback(identity.currentUser() ?? null);
 
-  window.netlifyIdentity.on("init", run);
-  window.netlifyIdentity.on("login", run);
-  window.netlifyIdentity.on("logout", () => callback(null));
+  identity.on("init", run);
+  identity.on("login", run);
+  identity.on("logout", () => callback(null));
 
-  if (window.netlifyIdentity.currentUser()) {
+  if (identity.currentUser()) {
+    run();
+  } else {
     run();
   }
+
+  return true;
+}
+
+export function onIdentityReady(callback: (user: NetlifyIdentityUser | null) => void) {
+  if (attachIdentityListeners(callback)) return;
+
+  const started = Date.now();
+  const timer = window.setInterval(() => {
+    if (attachIdentityListeners(callback)) {
+      window.clearInterval(timer);
+      return;
+    }
+
+    if (Date.now() - started > 10_000) {
+      window.clearInterval(timer);
+      callback(null);
+    }
+  }, 100);
 }
 
 export function setupHubRouteGuard(requireAuth: boolean) {

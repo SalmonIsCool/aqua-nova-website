@@ -15,9 +15,13 @@ const upcomingEvent = events[0] ?? null;
 ---
 
 <HubLayout title="Dashboard" breadcrumbs={[{ label: "Home", href: "/hub/" }, { label: "Dashboard" }]}>
-  <div>
+  <div
+    id="hub-dashboard"
+    data-upcoming-event={upcomingEvent?.data.date.toISOString() ?? ""}
+  >
     <h1 class="hub-page-title" id="hub-greeting">Good evening, driver</h1>
     <p class="mt-1 text-sm text-slate-400" id="hub-datetime"></p>
+    <p id="hub-dashboard-status" class="mt-2 hidden text-sm text-rose-300"></p>
 
     <section class="mt-6 grid gap-4 lg:grid-cols-3">
       <article class="hub-stat-card">
@@ -151,7 +155,7 @@ const upcomingEvent = events[0] ?? null;
   </div>
 </HubLayout>
 
-<script define:vars={{ upcomingEventDate: upcomingEvent?.data.date.toISOString() ?? null }}>
+<script>
   import { getAuthHeaders, onIdentityReady } from "../../scripts/hub-auth";
 
   const formatter = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
@@ -164,15 +168,21 @@ const upcomingEvent = events[0] ?? null;
     return "Good evening";
   }
 
-  function setProgress(current, goal, barId, labelId, unit) {
+  function setProgress(current: number, goal: number, barId: string, labelId: string, unit: string) {
     const pct = Math.min(Math.round((current / goal) * 100), 100);
     const remaining = Math.max(goal - current, 0);
-    document.getElementById(barId).style.width = `${pct}%`;
-    document.getElementById(labelId).textContent =
-      remaining > 0 ? `${fullFormatter.format(remaining)} ${unit} remaining (${pct}%)` : `Goal reached (${pct}%)`;
+    const bar = document.getElementById(barId);
+    const label = document.getElementById(labelId);
+    if (bar) bar.style.width = `${pct}%`;
+    if (label) {
+      label.textContent =
+        remaining > 0
+          ? `${fullFormatter.format(remaining)} ${unit} remaining (${pct}%)`
+          : `Goal reached (${pct}%)`;
+    }
   }
 
-  function formatCountdown(targetIso) {
+  function formatCountdown(targetIso: string) {
     const diff = new Date(targetIso).getTime() - Date.now();
     if (diff <= 0) return "Starting soon";
     const hours = Math.floor(diff / 3_600_000);
@@ -181,10 +191,20 @@ const upcomingEvent = events[0] ?? null;
     return `in ${hours} hour${hours === 1 ? "" : "s"}`;
   }
 
+  function showDashboardError(message: string) {
+    const statusEl = document.getElementById("hub-dashboard-status");
+    if (statusEl) {
+      statusEl.textContent = message;
+      statusEl.classList.remove("hidden");
+    }
+  }
+
   async function loadDashboard() {
+    const root = document.getElementById("hub-dashboard");
     const greetingEl = document.getElementById("hub-greeting");
     const datetimeEl = document.getElementById("hub-datetime");
     const activityEl = document.getElementById("recent-activity");
+    const upcomingEventDate = root?.dataset.upcomingEvent ?? "";
 
     if (datetimeEl) {
       datetimeEl.textContent = new Date().toLocaleString(undefined, {
@@ -200,16 +220,33 @@ const upcomingEvent = events[0] ?? null;
       if (countdown) countdown.textContent = formatCountdown(upcomingEventDate);
     }
 
-    try {
-      const [statsRes, leaderboardRes, jobsRes] = await Promise.all([
-        fetch("/api/my-stats", { headers: getAuthHeaders() }),
-        fetch("/api/leaderboard"),
-        fetch("/api/company-jobs?page=1", { headers: getAuthHeaders() })
-      ]);
+    const errors: string[] = [];
 
-      const statsData = await statsRes.json();
+    try {
+      const leaderboardRes = await fetch("/api/leaderboard");
       const leaderboardData = await leaderboardRes.json();
-      const jobsData = await jobsRes.json();
+
+      if (leaderboardRes.ok) {
+        const drivers = Array.isArray(leaderboardData.drivers) ? leaderboardData.drivers : [];
+        const totalJobs = drivers.reduce((sum: number, d: { jobs?: number }) => sum + (d.jobs ?? 0), 0);
+        const totalKm = drivers.reduce(
+          (sum: number, d: { drivenDistanceKm?: number }) => sum + (d.drivenDistanceKm ?? 0),
+          0
+        );
+        const totalMi = Math.round(totalKm * 0.621371);
+
+        const driversEl = document.getElementById("company-drivers");
+        const jobsEl = document.getElementById("company-jobs");
+        const milesEl = document.getElementById("company-miles");
+        if (driversEl) driversEl.textContent = fullFormatter.format(drivers.length);
+        if (jobsEl) jobsEl.textContent = formatter.format(totalJobs);
+        if (milesEl) milesEl.textContent = formatter.format(totalMi);
+      } else {
+        errors.push(leaderboardData.error ?? "Could not load company stats.");
+      }
+
+      const statsRes = await fetch("/api/my-stats", { headers: getAuthHeaders() });
+      const statsData = await statsRes.json();
 
       if (statsRes.ok) {
         const name = statsData.driver?.name ?? "driver";
@@ -220,24 +257,22 @@ const upcomingEvent = events[0] ?? null;
         const jobs = stats.jobs ?? 0;
         const distanceMi = Math.round(distanceKm * 0.621371);
 
-        document.getElementById("stat-jobs").textContent = fullFormatter.format(jobs);
-        document.getElementById("stat-distance").textContent = fullFormatter.format(distanceMi);
-        document.getElementById("stat-revenue").textContent = `€${fullFormatter.format(stats.revenue ?? 0)}`;
+        const statJobs = document.getElementById("stat-jobs");
+        const statDistance = document.getElementById("stat-distance");
+        const statRevenue = document.getElementById("stat-revenue");
+        if (statJobs) statJobs.textContent = fullFormatter.format(jobs);
+        if (statDistance) statDistance.textContent = fullFormatter.format(distanceMi);
+        if (statRevenue) statRevenue.textContent = `€${fullFormatter.format(stats.revenue ?? 0)}`;
 
         setProgress(distanceMi, 5000, "progress-distance", "progress-distance-label", "mi");
         setProgress(jobs, 50, "progress-jobs", "progress-jobs-label", "jobs");
+      } else {
+        errors.push(statsData.error ?? "Could not load your stats.");
+        if (greetingEl) greetingEl.textContent = `${greeting()}, driver`;
       }
 
-      if (leaderboardRes.ok) {
-        const drivers = Array.isArray(leaderboardData.drivers) ? leaderboardData.drivers : [];
-        const totalJobs = drivers.reduce((sum, d) => sum + (d.jobs ?? 0), 0);
-        const totalKm = drivers.reduce((sum, d) => sum + (d.drivenDistanceKm ?? 0), 0);
-        const totalMi = Math.round(totalKm * 0.621371);
-
-        document.getElementById("company-drivers").textContent = fullFormatter.format(drivers.length);
-        document.getElementById("company-jobs").textContent = formatter.format(totalJobs);
-        document.getElementById("company-miles").textContent = formatter.format(totalMi);
-      }
+      const jobsRes = await fetch("/api/company-jobs?page=1", { headers: getAuthHeaders() });
+      const jobsData = await jobsRes.json();
 
       if (jobsRes.ok && activityEl) {
         const jobs = (jobsData.jobs ?? []).slice(0, 5);
@@ -246,7 +281,7 @@ const upcomingEvent = events[0] ?? null;
         } else {
           activityEl.innerHTML = jobs
             .map(
-              (job) => `
+              (job: { driver: string; distance: number; date: string | null }) => `
               <li class="flex items-start justify-between gap-3 text-sm">
                 <div>
                   <p class="font-medium text-white">Job delivered</p>
@@ -257,8 +292,14 @@ const upcomingEvent = events[0] ?? null;
             )
             .join("");
         }
+      } else if (activityEl) {
+        activityEl.innerHTML = `<li class="text-sm text-slate-400">Could not load recent activity.</li>`;
+        if (!jobsRes.ok) errors.push(jobsData.error ?? "Could not load recent jobs.");
       }
+
+      if (errors.length) showDashboardError(errors.join(" "));
     } catch {
+      showDashboardError("Could not reach the hub API. Try refreshing the page.");
       if (activityEl) activityEl.innerHTML = `<li class="text-sm text-rose-300">Could not load dashboard data.</li>`;
     }
   }
