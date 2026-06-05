@@ -112,6 +112,40 @@ import HubLayout from "../../layouts/HubLayout.astro";
     return labels[type] ?? type.replace(/_/g, " ");
   }
 
+  function layoutTimelinePositions(events: Record<string, unknown>[], job: Record<string, unknown>) {
+    const start = new Date(String(job.started_at ?? job.created_at)).getTime();
+    const end = new Date(String(job.completed_at ?? job.updated_at ?? job.created_at)).getTime();
+    const span = Math.max(end - start, 1);
+    const minGap = events.length <= 3 ? 24 : events.length <= 5 ? 16 : 12;
+    const edge = 6;
+    const maxLeft = 100 - edge;
+
+    const positioned = events.map((event) => {
+      const time = new Date(String(event.created_at)).getTime();
+      const ideal = edge + ((time - start) / span) * (100 - edge * 2);
+      return { event, left: Math.min(Math.max(ideal, edge), maxLeft) };
+    });
+
+    for (let index = 1; index < positioned.length; index += 1) {
+      const previous = positioned[index - 1].left;
+      if (positioned[index].left < previous + minGap) {
+        positioned[index].left = previous + minGap;
+      }
+    }
+
+    if (positioned.length && positioned[positioned.length - 1].left > maxLeft) {
+      positioned[positioned.length - 1].left = maxLeft;
+      for (let index = positioned.length - 2; index >= 0; index -= 1) {
+        const next = positioned[index + 1].left;
+        if (positioned[index].left > next - minGap) {
+          positioned[index].left = Math.max(next - minGap, edge + index * minGap);
+        }
+      }
+    }
+
+    return positioned;
+  }
+
   function renderTimeline(events: Record<string, unknown>[], job: Record<string, unknown>) {
     const filtered = events
       .filter((event) => timelineEventTypes.has(String(event.event_type)))
@@ -119,27 +153,23 @@ import HubLayout from "../../layouts/HubLayout.astro";
 
     if (!filtered.length) return "";
 
-    const start = new Date(String(job.started_at ?? job.created_at)).getTime();
-    const end = new Date(String(job.completed_at ?? job.updated_at ?? job.created_at)).getTime();
-    const span = Math.max(end - start, 1);
+    const positioned = layoutTimelinePositions(filtered, job);
 
-    const markers = filtered
-      .map((event, index) => {
-        const time = new Date(String(event.created_at)).getTime();
-        const left = Math.min(Math.max(((time - start) / span) * 100, 4), 96);
-        const top = index % 2 === 0;
+    const markers = positioned
+      .map(({ event, left }, index) => {
+        const above = index % 2 === 0;
         const type = String(event.event_type);
         const icon = eventIcons[type] ?? "•";
 
-        const card = `<div class="job-timeline__card ${top ? "job-timeline__card--top" : "job-timeline__card--bottom"}">
+        const card = `<div class="job-timeline__card">
           <p class="text-slate-400">${formatDate(event.created_at)}</p>
           <p class="mt-1 font-semibold text-white">${eventLabel(event)}</p>
         </div>`;
 
-        return `<div class="job-timeline__event" style="left: ${left}%">
-          ${top ? card : ""}
-          <div class="job-timeline__marker">${icon}</div>
-          ${top ? "" : card}
+        return `<div class="job-timeline__event" style="left: ${left.toFixed(1)}%">
+          <div class="job-timeline__slot job-timeline__slot--above">${above ? card : ""}</div>
+          <div class="job-timeline__marker" aria-hidden="true">${icon}</div>
+          <div class="job-timeline__slot job-timeline__slot--below">${above ? "" : card}</div>
         </div>`;
       })
       .join("");
@@ -147,8 +177,10 @@ import HubLayout from "../../layouts/HubLayout.astro";
     return `<section class="job-view-card mt-6">
       <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">Route events</h2>
       <div class="job-timeline">
-        <div class="job-timeline__line"></div>
-        ${markers}
+        <div class="job-timeline__track">
+          <div class="job-timeline__line" aria-hidden="true"></div>
+          ${markers}
+        </div>
       </div>
     </section>`;
   }

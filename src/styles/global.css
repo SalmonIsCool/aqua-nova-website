@@ -112,31 +112,50 @@ summary:focus-visible {
 }
 
 .job-timeline {
-  @apply relative mt-10 rounded-xl border border-white/10 bg-[#101a38]/90 px-4 py-16 sm:px-8;
+  @apply overflow-x-auto rounded-xl border border-white/10 bg-[#101a38]/90 px-2 py-4 sm:px-4;
+}
+
+.job-timeline__track {
+  @apply relative mx-2 min-w-[20rem] sm:mx-4;
+  height: 11.5rem;
+  margin-top: 1.5rem;
 }
 
 .job-timeline__line {
-  @apply absolute left-8 right-8 top-1/2 h-0.5 -translate-y-1/2 bg-slate-600/80;
+  @apply pointer-events-none absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-slate-600/80;
 }
 
 .job-timeline__event {
-  @apply absolute flex w-[9.5rem] -translate-x-1/2 flex-col items-center;
+  @apply absolute top-1/2 w-[8.75rem] -translate-x-1/2 -translate-y-1/2;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+}
+
+.job-timeline__slot {
+  @apply flex w-full items-center justify-center px-0.5;
+}
+
+.job-timeline__slot--above {
+  grid-row: 1;
+  align-items: flex-end;
+  padding-bottom: 0.5rem;
+}
+
+.job-timeline__slot--below {
+  grid-row: 3;
+  align-items: flex-start;
+  padding-top: 0.5rem;
 }
 
 .job-timeline__marker {
-  @apply z-10 flex h-8 w-8 items-center justify-center rounded-md bg-rose-600 text-sm shadow-md;
+  @apply z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-rose-600 text-sm shadow-md;
+  grid-row: 2;
 }
 
 .job-timeline__card {
-  @apply w-full rounded-lg border border-white/10 bg-[#1a2752] px-3 py-2 text-center text-xs shadow-lg;
-}
-
-.job-timeline__card--top {
-  @apply mb-3;
-}
-
-.job-timeline__card--bottom {
-  @apply mt-3;
+  @apply w-full rounded-lg border border-white/10 bg-[#1a2752] px-3 py-2 text-center text-xs leading-snug shadow-lg;
 }
 
 .job-finance-value {
