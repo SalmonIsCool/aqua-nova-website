@@ -1,6 +1,8 @@
 ---
 import HubLayout from "../../../layouts/HubLayout.astro";
 import { siteConfig } from "../../../data/site";
+
+const truckyVtcUrl = "https://hub.truckyapp.com/company/46318";
 ---
 
 <HubLayout
@@ -14,20 +16,59 @@ import { siteConfig } from "../../../data/site";
   <article class="hub-panel max-w-3xl">
     <h1 class="hub-page-title">Welcome to {siteConfig.name} 👋</h1>
     <p class="mt-4 text-slate-300">
-      This page will walk new drivers through paint jobs, tracker setup, Discord, and your first delivery. Content is
-      coming soon.
+      Everything you need to get on the road with Aqua Nova — starting with Trucky, our job tracker and link to the
+      Drivers Hub.
     </p>
 
+    <section class="mt-8 rounded-xl border border-white/10 bg-[#081638]/50 p-5 sm:p-6">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-start">
+        <img
+          src="/assets/trucky-logo.png"
+          alt="Trucky"
+          width="72"
+          height="72"
+          class="h-[4.5rem] w-[4.5rem] shrink-0 rounded-xl shadow-lg shadow-rose-950/40"
+        />
+        <div class="min-w-0 space-y-4 text-slate-300">
+          <h2 class="text-xl font-semibold text-white">Trucky VTC</h2>
+          <p>
+            When your application was accepted, your recruiter should have invited you to join the{" "}
+            <a
+              href={truckyVtcUrl}
+              target="_blank"
+              rel="noreferrer"
+              class="font-semibold text-cyan-300 underline decoration-cyan-400/40 underline-offset-2 transition hover:text-cyan-200"
+            >
+              Trucky VTC
+            </a>
+            . If you were not invited, please contact your recruiter or{" "}
+            <a
+              href={siteConfig.discordInvite}
+              target="_blank"
+              rel="noreferrer"
+              class="font-semibold text-cyan-300 underline decoration-cyan-400/40 underline-offset-2 transition hover:text-cyan-200"
+            >
+              open a support ticket on Discord
+            </a>
+            .
+          </p>
+          <p class="rounded-lg border border-cyan-400/20 bg-cyan-950/30 px-4 py-3 text-sm leading-relaxed text-slate-200">
+            <strong class="text-white">It is mandatory</strong> to have Trucky open while driving for Aqua Nova
+            Transport. Trucky tracks your jobs and sends them to the Drivers Hub — that is how we record your distance,
+            deliveries, rank progress, and leaderboard stats.
+          </p>
+        </div>
+      </div>
+    </section>
+
     <section class="mt-8 space-y-4 text-slate-300">
-      <h2 class="text-xl font-semibold text-white">What to expect</h2>
+      <h2 class="text-xl font-semibold text-white">What to expect next</h2>
       <ul class="list-disc space-y-2 pl-5">
         <li>How to represent Aqua Nova on TruckersMP</li>
-        <li>Installing and using Trucky for job tracking</li>
         <li>Joining convoys and company events</li>
+        <li>Understanding driver ranks and company stats in the Drivers Hub</li>
         <li>Where to get help from staff and other drivers</li>
       </ul>
     </section>
-
-    <p class="mt-8 text-sm text-slate-500">Placeholder content — staff will add the full guide here.</p>
   </article>
 </HubLayout>
