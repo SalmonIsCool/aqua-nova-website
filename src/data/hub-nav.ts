@@ -15,7 +15,6 @@ export const hubNav: HubNavItem[] = [
     ]
   },
   { label: "Leaderboard", href: "/hub/leaderboard" },
-  { label: "Map", href: "/hub/map" },
   {
     label: "Training",
     children: [
